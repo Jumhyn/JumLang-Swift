@@ -26,7 +26,7 @@ operator infix !^{}
     return !(lhs ^ rhs)
 }
 
-extension Int {
+extension UInt {
     func times(block : () -> ()) {
         for i in 0..<self {
             block()

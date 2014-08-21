@@ -13,12 +13,15 @@ class Lexer {
     var line: UInt = 0
     var characterIndex: String.Index
 
+    //buffer that stores the full string of the file currently being lexed
     var buffer: String
 
+    //dict that stores alphanumeric strings and their corresponding tokens
     var wordDict = Dictionary<String, Token>()
 
+    //return the character at the current index, unless we're at the end of the buffer, then return the null character
     var currentChar: Character {
-        if !(characterIndex < buffer.endIndex) {
+        if characterIndex == buffer.endIndex {
             return "\0"
         }
         else {
@@ -26,15 +29,18 @@ class Lexer {
         }
     }
 
+    //advance forward one character and return the current character
     var nextChar: Character {
         advance()
         return currentChar
     }
 
-    init(string: String) {
+    //designated initializer: set up the buffer, index, and populate the word dict with our reserved words
+    init(_ string: String) {
         buffer = string
         characterIndex = buffer.startIndex
-        wordDict = ["true" : .Boolean(true),
+        wordDict = [
+            "true" : .Boolean(true),
             "false" : .Boolean(false),
             "if" : .If,
             "else" : .Else,
@@ -46,175 +52,156 @@ class Lexer {
             "int" : .Type(.intType()),
             "float" : .Type(.floatType()),
             "bool" : .Type(.boolType()),
-            "void" : .Type(.voidType())]
+            "void" : .Type(.voidType())
+        ]
     }
 
-    convenience init(_ file: String) {
+    //load the file if it contains anything, otherwise initialize with an empty string
+    convenience init(file: String) {
         if let content = String.stringWithContentsOfFile(file, encoding: NSUTF8StringEncoding, error: nil) {
-            self.init(string: content)
+            self.init(content)
         }
         else {
-            self.init(string: "")
+            self.init("")
         }
     }
 
     func nextToken() -> Token {
-        while characterIndex < buffer.endIndex && currentChar == "/" || currentChar.isSpace() {
-            while currentChar.isSpace() {
-                if currentChar == "\t" || currentChar == " " {
-                    advance()
-                }
-                else if currentChar == "\n" {
-                    line++
-                    advance()
-                }
+        skipIgnoredChars()
+        if currentChar.isDigit() {
+            return getNumToken()
+        }
+        else if currentChar.isAlpha() {
+            return getWordToken()
+        }
+        else if currentChar == "\"" {
+            return getStringToken()
+        }
+        else { //... if the following token is not a number, word, or string literal, it must be some other symbol
+            let lookback = currentChar
+            switch String(currentChar, nextChar) {
+            case let tok where contains(["<=", ">=", "==", "!=", "&&", "||"], tok):
+                //two character token
+                advance()
+                return Token(tok)
+
+            default:
+                //single character token
+                return Token(lookback)
             }
-            if currentChar == "/" && characterIndex < buffer.endIndex {
-                if peek() == "/" {
+        }
+    }
+
+    func hasToken() -> Bool {
+        if currentChar {
+            return true
+        }
+        else {
+            return false
+        }
+    }
+
+    private func skipIgnoredChars() {
+        while currentChar == "/" || currentChar.isSpace() { //as long as there are comments or whitespace, skip them
+            if currentChar == "/" {
+                switch nextChar {
+                case "/": //the next two characters are "//", so skip the rest of the line
                     while currentChar != "\n" && currentChar {
                         advance()
                     }
                     line++
                     advance()
-                }
-                else if peek() == "*" {
-                    advance(2)
-                    while currentChar != "\0" {
-                        if currentChar == "*"  && characterIndex < buffer.endIndex {
-                            if peek() == "/" {
-                                advance(2);
+                case "*": //the next two characters are "/*" so skip until we find "*/"
+                    while nextChar {
+                        if currentChar == "*" {
+                            if nextChar == "/" {
                                 break
                             }
                         }
                     }
+                    advance(2)
+                default:
+                    recede()
                 }
             }
-        }
-        if currentChar.isDigit() {
-            var val = 0
-            while currentChar.isDigit() {
-                val = val * 10 + currentChar.toInt()!
-                advance()
-            }
-            if currentChar == "." {
-                advance()
-                var doubleVal = Double(val)
-                var powerOfTen: Double = 1.0
-                while currentChar.isDigit() {
-                    doubleVal += Double(currentChar.toInt()!) / (10.0 ^ powerOfTen)
+            while currentChar.isSpace() { //skip any whitespace, while keeping track of newlines
+                if currentChar == "\n" {
+                    line++
                 }
-                return .Decimal(doubleVal)
-            }
-            else {
-                return .Integer(val)
-            }
-        }
-        else if currentChar.isAlpha() {
-            var word = ""
-            while currentChar.isAlpha() || currentChar.isDigit() {
-                word += currentChar
                 advance()
             }
-            if let tok = wordDict[word] {
-                return tok
-            }
-            else {
-                wordDict[word] = .Identifier(word)
-                return .Identifier(word)
-            }
         }
-        else if currentChar == "\"" {
+    }
+
+    private func getNumToken() -> Token {
+        var val = 0
+        while currentChar.isDigit() { //loop through digit by digit until we hit something that isnt a digit
+            val = val * 10 + currentChar.toInt()!
             advance()
-            var str = ""
-            while peek() != "\"" || currentChar == "\\" {
-                str += currentChar
+        }
+        if currentChar == "." { //if it's a decimal point, we have a decimal number...
+            advance()
+            var doubleVal = Double(val)
+            var powerOfTen: Double = 1.0
+            while currentChar.isDigit() {
+                doubleVal += Double(currentChar.toInt()!) / (10.0 ^ powerOfTen)
             }
-            str += currentChar
-            advance(2)
-            return .StringLiteral(str)
+            return .Decimal(doubleVal)
         }
         else {
-            let lookback = currentChar
-            var tok = String(currentChar, nextChar)
-            switch tok {
-            case "<=", ">=", "==", "!=", "&&", "||":
-                advance()
-                return Token(tok)
+            return .Integer(val)
+        }
+    }
 
-            default:
-                return Token(lookback)
-            }
-        }
-        if currentChar == "<" {
+    private func getWordToken() -> Token {
+        let startIndex = characterIndex
+        while currentChar.isAlpha() || currentChar.isDigit() { //as long as we have an alphanumeric character, keep going
             advance()
-            if currentChar == "=" {
+        }
+        let word = buffer[startIndex..<characterIndex] //create the word from the characters we've passed over
+        if let tok = wordDict[word] { //if the work exists/has a token already, use the dict entry
+            return tok
+        }
+        else { //...otherwise, it's a new identifier, so add it to the dictionary!
+            wordDict[word] = .Identifier(word)
+            return .Identifier(word)
+        }
+    }
+
+    private func getStringToken() -> Token {
+        advance() //skip over opening quote that brought us here
+        let startIndex = characterIndex
+        while nextChar != "\"" { //until we encounter a closing quote, skip over characters
+            if currentChar == "\\" && nextChar == "\"" { //if the quote is escaped, then skip over!
                 advance()
-                return .LEqual
-            }
-            else {
-                return .Less
             }
         }
-        else if currentChar == ">" {
-            advance()
-            if currentChar == "=" {
-                advance()
-                return .GEqual
-            }
-            else {
-                return .Greater
-            }
-        }
-        else if currentChar == "=" {
-            advance()
-            if currentChar == "=" {
-                advance()
-                return .Equal
-            }
-            else {
-                return .Assign
-            }
-        }
-        else if currentChar == "!" {
-            advance()
-            if currentChar == "=" {
-                advance()
-                return .NEqual
-            }
-            else {
-                return .Not
-            }
-        }
-        else if currentChar == "&" {
-            advance()
-            if currentChar == "&" {
-                advance()
-                return .And
-            }
-        }
-        else if currentChar == "|" {
-            advance()
-            if currentChar == "|" {
-                advance()
-                return .Or
-            }
-        }
-        var ret = Token(currentChar)
+        let str = buffer[startIndex..<characterIndex] //create the string like we did the word
         advance()
-        return ret
+        return .StringLiteral(str)
     }
 
-    func peek() -> Character {
-        return buffer[characterIndex.successor()]
+    private func advance() {
+        if !(characterIndex == buffer.endIndex) {
+            characterIndex = characterIndex.successor()
+        }
     }
 
-    func advance() {
-        characterIndex = characterIndex.successor()
+    private func recede() {
+        if !(characterIndex == buffer.startIndex) {
+            characterIndex = characterIndex.predecessor()
+        }
     }
 
-    func advance(num: Int) {
+    private func advance(num: UInt) {
         num.times {
             self.advance()
+        }
+    }
+
+    private func recede(num: UInt) {
+        num.times {
+            self.recede()
         }
     }
 }
