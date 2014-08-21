@@ -7,7 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B6609A0C19843AC200F57756 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6609A0B19843AC200F57756 /* Tokens.swift */; };
 		B6B0517C19832BE4001298B7 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B0517B19832BE4001298B7 /* main.swift */; };
+		B6B0518319832C0E001298B7 /* Lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B0518219832C0E001298B7 /* Lexer.swift */; };
+		B6B0518519842B5D001298B7 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B0518419842B5D001298B7 /* Types.swift */; };
+		B6B1A3F3198F7879000A09B9 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B1A3F2198F7879000A09B9 /* Extensions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +27,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B6609A0B19843AC200F57756 /* Tokens.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		B6B0517819832BE4001298B7 /* SwiftCompiler */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = SwiftCompiler; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6B0517B19832BE4001298B7 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		B6B0518219832C0E001298B7 /* Lexer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lexer.swift; sourceTree = "<group>"; };
+		B6B0518419842B5D001298B7 /* Types.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Types.swift; sourceTree = "<group>"; };
+		B6B1A3F2198F7879000A09B9 /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +66,10 @@
 			isa = PBXGroup;
 			children = (
 				B6B0517B19832BE4001298B7 /* main.swift */,
+				B6B0518219832C0E001298B7 /* Lexer.swift */,
+				B6B0518419842B5D001298B7 /* Types.swift */,
+				B6609A0B19843AC200F57756 /* Tokens.swift */,
+				B6B1A3F2198F7879000A09B9 /* Extensions.swift */,
 			);
 			path = SwiftCompiler;
 			sourceTree = "<group>";
@@ -118,7 +130,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B6B1A3F3198F7879000A09B9 /* Extensions.swift in Sources */,
+				B6B0518519842B5D001298B7 /* Types.swift in Sources */,
+				B6B0518319832C0E001298B7 /* Lexer.swift in Sources */,
 				B6B0517C19832BE4001298B7 /* main.swift in Sources */,
+				B6609A0C19843AC200F57756 /* Tokens.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,6 +249,7 @@
 				B6B0518119832BE4001298B7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
