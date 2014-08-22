@@ -8,7 +8,7 @@
 
 import Foundation
 
-@infix func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
+func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
     return lhs.width == rhs.width && lhs.isNumeric !^ rhs.isNumeric
 }
 

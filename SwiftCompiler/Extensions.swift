@@ -8,21 +8,23 @@
 
 import Foundation
 
-@infix func <(lhs: String.Index, rhs: String.Index) -> Bool {
+func <(lhs: String.Index, rhs: String.Index) -> Bool {
     return distance(lhs, rhs) > 0
 }
 
-@infix func >(lhs: String.Index, rhs: String.Index) -> Bool {
+func >(lhs: String.Index, rhs: String.Index) -> Bool {
     return distance(lhs, rhs) < 0
 }
 
-@infix func ^(lhs: Double, rhs: Double) -> Double {
+func ^(lhs: Double, rhs: Double) -> Double {
     return pow(lhs, rhs)
 }
 
-operator infix !^{}
+infix operator !^ {
 
-@infix func !^(lhs: Bool, rhs: Bool) -> Bool {
+}
+
+func !^(lhs: Bool, rhs: Bool) -> Bool {
     return !(lhs ^ rhs)
 }
 
@@ -38,13 +40,13 @@ extension String {
     init(_ characters: Character...) {
         self.init(characters[0])
         for character in characters[1..<characters.count] {
-            self += character
+            self.append(character)
         }
     }
 }
 
-extension Character : LogicValue {
-    public func getLogicValue() -> Bool {
+extension Character : BooleanType {
+    public var boolValue: Bool {
         return self != "\0"
     }
 }

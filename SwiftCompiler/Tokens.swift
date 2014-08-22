@@ -8,7 +8,7 @@
 
 import Foundation
 
-@infix func ==(lhs: Token, rhs: Token) -> Bool {
+func ==(lhs: Token, rhs: Token) -> Bool {
     switch lhs {
     case .Any:
         return true
@@ -330,54 +330,54 @@ enum Token : Streamable, Printable {
     init(_ value: String) {
         switch value {
         case "+":
-            self = .Plus; break
+            self = .Plus
         case "-":
-            self = .Minus; break
+            self = .Minus
         case "*":
-            self = .Times; break
+            self = .Times
         case "/":
-            self = .Divide; break
+            self = .Divide
         case "<":
-            self = .Less; break
+            self = .Less
         case "<=":
-            self = .LEqual; break
+            self = .LEqual
         case "==":
-            self = .Equal; break
+            self = .Equal
         case ">=":
-            self = .GEqual; break
+            self = .GEqual
         case ">":
-            self = .Greater; break
+            self = .Greater
         case "!":
-            self = .Not; break
+            self = .Not
         case "!=":
-            self = .NEqual; break
+            self = .NEqual
         case "=":
-            self = .Assign; break
+            self = .Assign
         case "&&":
-            self = .And; break
+            self = .And
         case "||":
-            self = .Or; break
+            self = .Or
         case "{":
-            self = .LBrace; break
+            self = .LBrace
         case "}":
-            self = .RBrace; break
+            self = .RBrace
         case "(":
-            self = .LParen; break
+            self = .LParen
         case ")":
-            self = .RParen; break
+            self = .RParen
         case "[":
-            self = .LBrack; break
+            self = .LBrack
         case "]":
-            self = .RBrack; break
+            self = .RBrack
 
         default:
-            self = .Unknown; break
+            self = .Unknown
         }
     }
     init (_ value: Character) {
-        return self.init(String(value))
+        self.init(String(value))
     }
-    func writeTo<Target : OutputStream>(inout target: Target) {
+    func writeTo<Target : OutputStreamType>(inout target: Target) {
         target.write(self.description);
     }
 }
