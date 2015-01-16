@@ -217,7 +217,7 @@ func ==(lhs: Token, rhs: Token) -> Bool {
     }
 }
 
-enum Token : Streamable, Printable {
+enum Token : Streamable, Printable, Hashable {
     case Any
 
     case Plus, Minus, Times, Divide
@@ -327,6 +327,10 @@ enum Token : Streamable, Printable {
         }
     }
 
+    var hashValue: Int {
+        return self.description.hashValue
+    }
+
     init(_ value: String) {
         switch value {
         case "+":
@@ -374,9 +378,11 @@ enum Token : Streamable, Printable {
             self = .Unknown
         }
     }
+
     init (_ value: Character) {
         self.init(String(value))
     }
+
     func writeTo<Target : OutputStreamType>(inout target: Target) {
         target.write(self.description);
     }

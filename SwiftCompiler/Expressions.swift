@@ -8,7 +8,7 @@
 
 import Foundation
 
-class Expression {
+class Expression: Node {
     var op: Token
     var type: TypeBase
 
@@ -48,7 +48,7 @@ class Arithmetic: Operator {
     var expr1: Expression
     var expr2: Expression
 
-    init(_ op: Token, _ expr1: Expression, _ expr2: Expression) {
+    init(op: Token, expr1: Expression, expr2: Expression) {
         self.expr1 = expr1
         self.expr2 = expr2
         super.init(op, Type_max(expr1.type, expr2.type))
@@ -58,7 +58,7 @@ class Arithmetic: Operator {
 class Unary: Operator {
     var expr: Expression
 
-    init(_ op: Token, _ expr: Expression) {
+    init( op: Token, expr: Expression) {
         self.expr = expr
         super.init(op, expr.type)
     }
@@ -78,7 +78,7 @@ class Logical: Expression {
     var expr1: Expression
     var expr2: Expression
 
-    init(_ op: Token, _ expr1: Expression, _ expr2: Expression) {
+    init(op: Token, expr1: Expression, expr2: Expression) {
         self.expr1 = expr1
         self.expr2 = expr2
         super.init(op, TypeBase.boolType())
@@ -98,8 +98,8 @@ class Or: Logical {
 }
 
 class Not: Logical {
-    init(_ op: Token, _ expr: Expression) {
-        super.init(op, expr, expr)
+    init(op: Token, expr: Expression) {
+        super.init(op: op, expr1: expr, expr2: expr)
     }
 }
 
@@ -111,7 +111,7 @@ class Call: Expression {
     var id: Identifier
     var args: [Expression]
 
-    init(_ id: Identifier, args: [Expression]) {
+    init(id: Identifier, args: [Expression]) {
         self.id = id
         self.args = args
         super.init(id.op, id.type)
