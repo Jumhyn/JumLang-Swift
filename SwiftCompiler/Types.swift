@@ -20,6 +20,18 @@ func ==(lhs: ArrayType, rhs: ArrayType) -> Bool {
     return lhs.to == rhs.to && lhs.elements == rhs.elements
 }
 
+func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
+    if (type1 == TypeBase.floatType() || type2 == TypeBase.floatType()) {
+        return TypeBase.floatType();
+    }
+    else if (type1 == TypeBase.intType() || type2 == TypeBase.intType()) {
+        return TypeBase.intType();
+    }
+    else {
+        return TypeBase.charType();
+    }
+}
+
 class TypeBase {
     var isNumeric: Bool = false
     var width: UInt = 0

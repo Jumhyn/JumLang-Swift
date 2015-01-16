@@ -26,7 +26,7 @@ class Expression {
     }
 }
 
-class Identifier : Expression {
+class Identifier: Expression {
     var offset = 0
     var isAllocated = false
     var isArgument = false
@@ -40,6 +40,81 @@ class Identifier : Expression {
     }
 }
 
-class Operator : Expression {
+class Operator: Expression {
 
 }
+
+class Arithmetic: Operator {
+    var expr1: Expression
+    var expr2: Expression
+
+    init(_ op: Token, _ expr1: Expression, _ expr2: Expression) {
+        self.expr1 = expr1
+        self.expr2 = expr2
+        super.init(op, Type_max(expr1.type, expr2.type))
+    }
+}
+
+class Unary: Operator {
+    var expr: Expression
+
+    init(_ op: Token, _ expr: Expression) {
+        self.expr = expr
+        super.init(op, expr.type)
+    }
+}
+
+class Constant: Expression {
+    init(intVal val: Int) {
+        super.init(.Integer(val), TypeBase.intType())
+    }
+
+    init (floatVal val: Double) {
+        super.init(.Decimal(val), TypeBase.floatType())
+    }
+}
+
+class Logical: Expression {
+    var expr1: Expression
+    var expr2: Expression
+
+    init(_ op: Token, _ expr1: Expression, _ expr2: Expression) {
+        self.expr1 = expr1
+        self.expr2 = expr2
+        super.init(op, TypeBase.boolType())
+        //TODO: Add type checking
+        if (expr1.type == expr2.type) {
+            
+        }
+    }
+}
+
+class And: Logical {
+
+}
+
+class Or: Logical {
+
+}
+
+class Not: Logical {
+    init(_ op: Token, _ expr: Expression) {
+        super.init(op, expr, expr)
+    }
+}
+
+class Relation: Logical {
+
+}
+
+class Call: Expression {
+    var id: Identifier
+    var args: [Expression]
+
+    init(_ id: Identifier, args: [Expression]) {
+        self.id = id
+        self.args = args
+        super.init(id.op, id.type)
+    }
+}
+
