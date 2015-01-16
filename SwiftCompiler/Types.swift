@@ -12,6 +12,14 @@ func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
     return lhs.width == rhs.width && lhs.isNumeric !^ rhs.isNumeric
 }
 
+func ==(lhs: PointerType, rhs: PointerType) -> Bool {
+    return lhs.to == rhs.to
+}
+
+func ==(lhs: ArrayType, rhs: ArrayType) -> Bool {
+    return lhs.to == rhs.to && lhs.elements == rhs.elements
+}
+
 class TypeBase {
     var isNumeric: Bool = false
     var width: UInt = 0

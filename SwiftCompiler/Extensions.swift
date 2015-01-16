@@ -45,6 +45,15 @@ extension String {
     }
 }
 
+extension String {
+    func endsBasicBlock() -> Bool {
+        return self.hasPrefix("ret") || self.hasPrefix("br") || self.hasPrefix("switch") || self.hasPrefix("indirectbr") ||
+            self.hasPrefix("invoke") ||
+            self.hasPrefix("resume") ||
+            self.hasPrefix("unreachable")
+    }
+}
+
 extension Character : BooleanType {
     public var boolValue: Bool {
         return self != "\0"

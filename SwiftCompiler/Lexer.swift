@@ -29,12 +29,6 @@ class Lexer {
         }
     }
 
-    //advance forward one character and return the current character
-    var nextChar: Character {
-        advance()
-        return currentChar
-    }
-
     //designated initializer: set up the buffer, index, and populate the word dict with our reserved words
     init(_ string: String) {
         buffer = string
@@ -58,12 +52,18 @@ class Lexer {
 
     //load the file if it contains anything, otherwise initialize with an empty string
     convenience init(file: String) {
-        if let content = String.stringWithContentsOfFile(file, encoding: NSUTF8StringEncoding, error: nil) {
+        if let content = String(contentsOfFile:file, encoding: NSUTF8StringEncoding, error: nil) {
             self.init(content)
         }
         else {
             self.init("")
         }
+    }
+
+    //advance forward one character and return the current character
+    func nextChar() -> Character {
+        advance()
+        return currentChar
     }
 
     func nextToken() -> Token {
@@ -79,7 +79,7 @@ class Lexer {
         }
         else { //... if the following token is not a number, word, or string literal, it must be some other symbol
             let lookback = currentChar
-            switch String(currentChar, nextChar) {
+            switch String(currentChar, nextChar()) {
             case let tok where contains(["<=", ">=", "==", "!=", "&&", "||"], tok):
                 //two character token
                 advance()
@@ -104,7 +104,7 @@ class Lexer {
     private func skipIgnoredChars() {
         while currentChar == "/" || currentChar.isSpace() { //as long as there are comments or whitespace, skip them
             if currentChar == "/" {
-                switch nextChar {
+                switch nextChar() {
                 case "/": //the next two characters are "//", so skip the rest of the line
                     while currentChar != "\n" && currentChar {
                         advance()
@@ -112,9 +112,9 @@ class Lexer {
                     line++
                     advance()
                 case "*": //the next two characters are "/*" so skip until we find "*/"
-                    while nextChar {
+                    while nextChar() {
                         if currentChar == "*" {
-                            if nextChar == "/" {
+                            if nextChar() == "/" {
                                 break
                             }
                         }
@@ -171,8 +171,8 @@ class Lexer {
     private func getStringToken() -> Token {
         advance() //skip over opening quote that brought us here
         let startIndex = characterIndex
-        while nextChar != "\"" { //until we encounter a closing quote, skip over characters
-            if currentChar == "\\" && nextChar == "\"" { //if the quote is escaped, then skip over!
+        while nextChar() != "\"" { //until we encounter a closing quote, skip over characters
+            if currentChar == "\\" && nextChar() == "\"" { //if the quote is escaped, then skip over!
                 advance()
             }
         }
