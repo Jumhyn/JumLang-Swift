@@ -184,32 +184,56 @@ func ==(lhs: Token, rhs: Token) -> Bool {
 
     case let .Identifier(lid):
         switch rhs {
-        case let .Identifier(rid): return lid == rid
+        case let .Identifier(rid):
+            if (lid == nil || rid == nil) {
+                return true
+            }
+            return lid == rid
         default: return false
         }
     case let .Boolean(lbool):
         switch rhs {
-        case let .Boolean(rbool): return lbool == rbool
+        case let .Boolean(rbool):
+            if (lbool == nil || rbool == nil) {
+                return true
+            }
+            return lbool == rbool
         default: return false
         }
     case let .Integer(lint):
         switch rhs {
-        case let .Integer(rint): return lint == rint
+        case let .Integer(rint):
+            if (lint == nil || rint == nil) {
+                return true
+            }
+            return lint == rint
         default: return false
         }
     case let .Decimal(ldouble):
         switch rhs {
-        case let .Decimal(rdouble): return ldouble == rdouble
+        case let .Decimal(rdouble):
+            if (ldouble == nil || rdouble == nil) {
+                return true
+            }
+            return ldouble == rdouble
         default: return false
         }
     case let .StringLiteral(lstr):
         switch rhs {
-        case let .StringLiteral(rstr): return lstr == rstr
+        case let .StringLiteral(rstr):
+            if (lstr == nil || rstr == nil) {
+                return true
+            }
+            return lstr == rstr
         default: return false
         }
     case let .Type(ltype):
         switch rhs {
-        case let .Type(rtype): return ltype == rtype
+        case let .Type(rtype):
+            if (ltype == nil || rtype == nil) {
+                return true
+            }
+            return rtype == ltype
         default: return false
         }
     default:
@@ -232,12 +256,15 @@ enum Token : Streamable, Printable, Hashable {
 
     case If, Else, While, Do, Break, Return
 
-    case Identifier(String)
-    case Boolean(Bool)
-    case Integer(Int)
-    case Decimal(Double)
-    case StringLiteral(String)
-    case Type(TypeBase)
+    //associated values are optional types so that
+    //(for example) .Identifier(nil) will match *any*
+    //.Identifier token
+    case Identifier(String?)
+    case Boolean(Bool?)
+    case Integer(Int?)
+    case Decimal(Double?)
+    case StringLiteral(String?)
+    case Type(TypeBase?)
 
     case Array, Index
 
@@ -397,42 +424,5 @@ enum Token : Streamable, Printable, Hashable {
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
         target.write(self.description);
-    }
-
-    func matches(other: Token) -> Bool {
-        switch self {
-        case let .Identifier(lid):
-            switch other {
-            case let .Identifier(rid): return true
-            default: return false
-            }
-        case let .Boolean(lbool):
-            switch other {
-            case let .Boolean(rbool): return true
-            default: return false
-            }
-        case let .Integer(lint):
-            switch other {
-            case let .Integer(rint): return true
-            default: return false
-            }
-        case let .Decimal(ldouble):
-            switch other {
-            case let .Decimal(rdouble): return true
-            default: return false
-            }
-        case let .StringLiteral(lstr):
-            switch other {
-            case let .StringLiteral(rstr): return true
-            default: return false
-            }
-        case let .Type(ltype):
-            switch other {
-            case let .Type(rtype): return true
-            default: return false
-            }
-        default:
-            return self == other
-        }
     }
 }

@@ -12,6 +12,23 @@ func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
     return lhs.width == rhs.width && lhs.isNumeric !^ rhs.isNumeric
 }
 
+func ==(lhs: TypeBase?, rhs: TypeBase?) -> Bool {
+    if let lhsUnwrapped = lhs {
+        if let rhsUnwrapped = rhs {
+            return lhsUnwrapped == rhsUnwrapped
+        }
+        else {
+            return false
+        }
+    }
+    else {
+        if let rhsUnwrapped = rhs {
+            return false
+        }
+        return true
+    }
+}
+
 func ==(lhs: PointerType, rhs: PointerType) -> Bool {
     return lhs.to == rhs.to
 }

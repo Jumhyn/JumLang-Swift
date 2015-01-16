@@ -8,9 +8,8 @@
 
 import Foundation
 
-func error(err: String, line: UInt) {
-    println("\(err) on line \(line)")
-    exit(1)
+@noreturn func error(err: String, line: UInt) {
+    fatalError("\(err) on line \(line)")
 }
 
 func <(lhs: String.Index, rhs: String.Index) -> Bool {

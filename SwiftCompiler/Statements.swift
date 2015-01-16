@@ -14,7 +14,7 @@ class Statement: Node {
 
 class Sequence: Statement {
     var stmt1: Statement
-    var stmt2: Statement?
+    var stmt2: Statement? = nil
 
     init(stmt: Statement) {
         self.stmt1 = stmt
@@ -23,6 +23,11 @@ class Sequence: Statement {
     init(stmt1: Statement, stmt2: Statement) {
         self.stmt1 = stmt1
         self.stmt2 = stmt2
+    }
+
+    init(stmt1: Statement, stmt2Opt: Statement?) {
+        self.stmt1 = stmt1
+        self.stmt2 = stmt2Opt
     }
 }
 

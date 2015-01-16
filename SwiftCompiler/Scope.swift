@@ -32,7 +32,7 @@ class Scope {
         self.globalScope = globalScope
     }
 
-    func identifierForToken(token: Token) -> Identifier! {
+    func identifierForToken(token: Token) -> Identifier {
         var currentScope = Scope(previousScope: self, globalScope: globalScope)
         while let currentScope = currentScope.previousScope {
             if let ret = symTable[token] {
@@ -42,10 +42,7 @@ class Scope {
         if let ret = globalScope.symTable[token] {
             return ret
         }
-        else if let proto = self.prototypeForToken(token) {
-            return proto.id
-        }
-        return nil
+        return self.prototypeForToken(token).id
     }
 
     func setIdentifier(id: Identifier, forToken token: Token) {
@@ -57,11 +54,11 @@ class Scope {
         }
     }
 
-    func prototypeForToken(token: Token) -> Prototype! {
+    func prototypeForToken(token: Token) -> Prototype {
         if let proto = globalScope.funcTable[token] {
             return proto
         }
-        return nil
+        error("use of undeclared identifier", 0)
     }
 
     func setPrototype(proto: Prototype, forToken token: Token) {
