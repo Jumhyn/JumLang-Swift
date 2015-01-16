@@ -8,26 +8,6 @@
 
 import Foundation
 
-func <(lhs: String.Index, rhs: String.Index) -> Bool {
-    return distance(lhs, rhs) > 0
-}
-
-func >(lhs: String.Index, rhs: String.Index) -> Bool {
-    return distance(lhs, rhs) < 0
-}
-
-func ^(lhs: Double, rhs: Double) -> Double {
-    return pow(lhs, rhs)
-}
-
-infix operator !^ {
-
-}
-
-func !^(lhs: Bool, rhs: Bool) -> Bool {
-    return !(lhs ^ rhs)
-}
-
 extension UInt {
     func times(block : () -> ()) {
         for i in 0..<self {

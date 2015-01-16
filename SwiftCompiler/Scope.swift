@@ -32,7 +32,7 @@ class Scope {
         self.globalScope = globalScope
     }
 
-    func identifier(forToken token: Token) -> Identifier! {
+    func identifierForToken(token: Token) -> Identifier! {
         var currentScope = Scope(previousScope: self, globalScope: globalScope)
         while let currentScope = currentScope.previousScope {
             if let ret = symTable[token] {
@@ -42,13 +42,13 @@ class Scope {
         if let ret = globalScope.symTable[token] {
             return ret
         }
-        else if let proto = self.prototype(forToken: token) {
+        else if let proto = self.prototypeForToken(token) {
             return proto.id
         }
         return nil
     }
 
-    func set(identifier id: Identifier, forToken token: Token) {
+    func setIdentifier(id: Identifier, forToken token: Token) {
         if let exists = symTable[token] {
             //TODO: error handling...
         }
@@ -57,14 +57,14 @@ class Scope {
         }
     }
 
-    func prototype(forToken token: Token) -> Prototype! {
+    func prototypeForToken(token: Token) -> Prototype! {
         if let proto = globalScope.funcTable[token] {
             return proto
         }
         return nil
     }
 
-    func set(prototype proto: Prototype, forToken token: Token) {
+    func setPrototype(proto: Prototype, forToken token: Token) {
         if let exists = globalScope.funcTable[token] {
             //TODO: error handling...
         }

@@ -34,7 +34,7 @@ class Identifier: Expression {
     var enclosingFuncName = ""
     var scopeNumber: UInt = 0
 
-    init(_ op: Token, _ type: TypeBase, offset: Int) {
+    init(_ op: Token, type: TypeBase, offset: Int) {
         self.offset = offset
         super.init(op, type)
     }

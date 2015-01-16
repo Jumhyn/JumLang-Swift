@@ -228,7 +228,7 @@ enum Token : Streamable, Printable, Hashable {
     case LBrace, RBrace
     case LParen, RParen
     case LBrack, RBrack
-    case Colon, Semi
+    case Colon, Semi, Comma, Dot
 
     case If, Else, While, Do, Break, Return
 
@@ -292,6 +292,10 @@ enum Token : Streamable, Printable, Hashable {
         return ":"
     case .Semi:
         return ";"
+    case .Comma:
+        return ","
+    case .Dot:
+        return "."
 
     case .If:
         return "if"
@@ -373,6 +377,14 @@ enum Token : Streamable, Printable, Hashable {
             self = .LBrack
         case "]":
             self = .RBrack
+        case ":":
+            self = .Colon
+        case ";":
+            self = .Semi
+        case ",":
+            self = .Colon
+        case ".":
+            self = .Dot
 
         default:
             self = .Unknown
@@ -385,5 +397,42 @@ enum Token : Streamable, Printable, Hashable {
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
         target.write(self.description);
+    }
+
+    func matches(other: Token) -> Bool {
+        switch self {
+        case let .Identifier(lid):
+            switch other {
+            case let .Identifier(rid): return true
+            default: return false
+            }
+        case let .Boolean(lbool):
+            switch other {
+            case let .Boolean(rbool): return true
+            default: return false
+            }
+        case let .Integer(lint):
+            switch other {
+            case let .Integer(rint): return true
+            default: return false
+            }
+        case let .Decimal(ldouble):
+            switch other {
+            case let .Decimal(rdouble): return true
+            default: return false
+            }
+        case let .StringLiteral(lstr):
+            switch other {
+            case let .StringLiteral(rstr): return true
+            default: return false
+            }
+        case let .Type(ltype):
+            switch other {
+            case let .Type(rtype): return true
+            default: return false
+            }
+        default:
+            return self == other
+        }
     }
 }

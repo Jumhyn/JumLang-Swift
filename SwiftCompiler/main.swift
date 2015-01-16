@@ -8,8 +8,8 @@
 
 import Foundation
 
-var lex = Lexer("+ >= > < <= == - * = + != && || =")
+var lex = Lexer("[int test: float arg1, bool arg2]")
 
-while lex.hasToken() {
-    println(lex.nextToken())
-}
+var parser = Parser(lex)
+
+var funcs = parser.program()
