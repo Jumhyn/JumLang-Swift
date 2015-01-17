@@ -8,7 +8,7 @@
 
 import Foundation
 
-var lex = Lexer("[int test: float arg1, bool arg2]")
+var lex = Lexer(file: "/Users/freddy/Development/Xcode Projects/SwiftCompiler/SwiftCompiler/JumTest.jum")
 
 var parser = Parser(lex)
 

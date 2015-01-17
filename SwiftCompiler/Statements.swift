@@ -78,6 +78,20 @@ class Assignment: Statement {
     }
 }
 
+class Return: Statement {
+    var expr: Expression? = nil
+    var from: Prototype
+
+    init(from: Prototype) {
+        self.from = from
+    }
+
+    init(expr: Expression, from: Prototype) {
+        self.expr = expr
+        self.from = from
+    }
+}
+
 class Expratement: Statement {
     var expr: Expression
 

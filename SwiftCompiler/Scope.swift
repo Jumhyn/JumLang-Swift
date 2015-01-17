@@ -11,7 +11,7 @@ import Foundation
 class Scope {
     var symTable: [Token : Identifier] = [:]
     var funcTable: [Token : Prototype] = [:]
-    var previousScope: Scope?
+    var previousScope: Scope? = nil
 
     unowned var globalScope: Scope
 
@@ -33,8 +33,7 @@ class Scope {
     }
 
     func identifierForToken(token: Token) -> Identifier {
-        var currentScope = Scope(previousScope: self, globalScope: globalScope)
-        while let currentScope = currentScope.previousScope {
+        for (var currentScope: Scope? = self; currentScope != nil; currentScope = currentScope?.previousScope) {
             if let ret = symTable[token] {
                 return ret
             }

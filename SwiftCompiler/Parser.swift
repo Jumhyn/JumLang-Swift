@@ -14,7 +14,7 @@ class Parser {
     var lookahead: Token
     var globalScope: Scope
     var topScope: Scope
-    weak var currentFunc: Prototype? = nil
+    weak var currentFunc: Prototype! = nil
 
     init(_ lexer: Lexer) {
         self.lexer = lexer
@@ -33,17 +33,16 @@ class Parser {
     }
 
     func function() -> Function {
-        var savedScope = topScope
+        let savedScope = topScope
         topScope = Scope(previousScope: savedScope, globalScope: globalScope)
-        var proto = self.prototype()
+        let proto = self.prototype()
         currentFunc = proto
         globalScope.setPrototype(proto, forToken: proto.id.op)
         self.match(.LBrace)
-        var stmt = self.sequence()
-        self.match(.RBrace)
-        topScope = savedScope
-        if let stmtUnwrapped = stmt {
-            return Function(proto,stmtUnwrapped)
+        if let stmt = self.sequence() {
+            self.match(.RBrace)
+            topScope = savedScope
+            return Function(proto, stmt)
         }
         error("expected statement", lexer.line)
     }
@@ -51,10 +50,10 @@ class Parser {
     func prototype() -> Prototype {
         self.match(.LBrack)
         //get the return type of the function
-        var funcType = self.type()
+        let funcType = self.type()
 
         //get the identifier
-        var funcIdTok = lookahead
+        let funcIdTok = lookahead
         self.match(.Identifier(nil))
 
         var args: [Identifier] = []
@@ -62,11 +61,11 @@ class Parser {
         if lookahead == .Colon {
             self.match(.Colon)
             do {
-                var varType = self.type()
-                var varIdTok = lookahead
+                let varType = self.type()
+                let varIdTok = lookahead
                 self.match(.Identifier(nil))
 
-                var id = Identifier(varIdTok, type: varType, offset: 0)
+                let id = Identifier(op: varIdTok, type: varType, offset: 0)
                 args.append(id)
                 topScope.setIdentifier(id, forToken: varIdTok)
 
@@ -81,7 +80,7 @@ class Parser {
         self.match(.RBrack)
 
         //create the identifier for the function and return the prototype
-        var funcId = Identifier(funcIdTok, type: funcType, offset: 0)
+        let funcId = Identifier(op: funcIdTok, type: funcType, offset: 0)
         return Prototype(funcId, args)
     }
 
@@ -94,19 +93,6 @@ class Parser {
         }
     }
 
-    func sequence() -> Statement? {
-        if lookahead == .RBrace {
-            return nil
-        }
-        else {
-            return Sequence(stmt1: self.statement(), stmt2Opt: self.sequence())
-        }
-    }
-
-    func statement() -> Statement {
-        return Statement()
-    }
-
     func match(token: Token) {
         if (lookahead == token || token == .Any) {
             lookahead = lexer.nextToken()
@@ -116,4 +102,255 @@ class Parser {
         }
     }
 
+    func match(tokens: Token ...) {
+        if (contains(tokens, lookahead) || contains(tokens, .Any)) {
+            lookahead = lexer.nextToken()
+        }
+        else {
+            error("expected \(tokens) instead of \(lookahead)", lexer.line)
+        }
+    }
+
+}
+
+//MARK: - Statements
+extension Parser {
+    func statement() -> Statement {
+        switch lookahead {
+        case .If:
+            return self.ifStatement()
+        case .While:
+            return self.whileStatement()
+        case .Do:
+            return self.doWhileStatement()
+        case .Return:
+            return self.returnStatement()
+        default:
+            return self.assignment()
+        }
+    }
+
+    func block() -> Statement {
+        self.match(.LBrace)
+        let savedScope = topScope
+        topScope = Scope(previousScope: savedScope, globalScope: globalScope)
+        if let stmt = self.sequence() {
+            self.match(.RBrace)
+            topScope = savedScope
+            return stmt
+        }
+        error("expected statement", lexer.line)
+    }
+
+    func sequence() -> Statement? {
+        if lookahead == .RBrace {
+            return nil
+        }
+        else {
+            return Sequence(stmt1: self.statement(), stmt2Opt: self.sequence())
+        }
+    }
+
+    func ifStatement() -> If {
+        self.match(.If)
+        let expr = self.expression()
+        let stmt = self.statement()
+        if self.lookahead == .Else {
+            self.match(.Else)
+            return If(expr: expr, stmt: stmt, elseStmt: self.statement())
+        }
+        return If(expr: expr, stmt: stmt)
+    }
+
+    func whileStatement() -> While {
+        self.match(.While)
+        let expr = self.expression()
+        return While(expr: expr, stmt: self.statement())
+    }
+
+    func doWhileStatement() -> DoWhile {
+        self.match(.Do)
+        let stmt = self.statement()
+        self.match(.While)
+        let expr = self.expression()
+        self.match(.Semi)
+        return DoWhile(stmt: stmt, expr: expr)
+    }
+
+    func returnStatement() -> Return {
+        self.match(.Return)
+        if lookahead == .Semi {
+            self.match(.Semi)
+            return Return(from: currentFunc)
+        }
+        if currentFunc.id.type == TypeBase.voidType() {
+            error("returning value from void function", lexer.line)
+        }
+        let expr = self.expression()
+        self.match(.Semi)
+        return Return(expr: expr, from: currentFunc)
+    }
+
+    func assignment() -> Assignment {
+        let id = topScope.identifierForToken(lookahead)
+        self.match(.Identifier(nil))
+        self.match(.Assign)
+        let stmt = Assignment(id: id, expr: self.orExpression())
+        self.match(.Semi)
+        return stmt
+    }
+}
+
+//MARK: - Expressions
+
+extension Parser {
+    func expression() -> Expression {
+        switch lookahead {
+        case .LParen:
+            self.match(.LParen)
+            let expr = self.orExpression()
+            self.match(.RParen)
+            return expr
+        case .Integer(_),.Decimal(_),.Boolean(_):
+            return self.constantExpression()
+        case .LBrack:
+            return self.callExpression()
+        case .Identifier(_):
+            let id = topScope.identifierForToken(lookahead)
+            self.match(.Identifier(nil))
+            return id
+        default:
+            error("expected expression", lexer.line)
+        }
+    }
+
+    func orExpression() -> Expression {
+        var lhs = self.andExpression()
+        while lookahead == .Or {
+            self.match(.Or)
+            let rhs = self.andExpression()
+            lhs = Or(expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func andExpression() -> Expression {
+        var lhs = self.equalityExpression()
+        while lookahead == .And {
+            self.match(.And)
+            let rhs = self.equalityExpression()
+            lhs = And(expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func equalityExpression() -> Expression {
+        var lhs = self.inequalityExpression()
+        while lookahead == .Equal || lookahead == .NEqual {
+            let op = lookahead
+            self.match(.Equal, .NEqual)
+            let rhs = self.inequalityExpression()
+            lhs = Relation(op: op, expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func inequalityExpression() -> Expression {
+        var lhs = self.additionExpression()
+        while lookahead == .Less || lookahead == .LEqual || lookahead == .Greater || lookahead == .GEqual {
+            let op = lookahead
+            self.match(.Less, .LEqual, .Greater, .GEqual)
+            let rhs = self.additionExpression()
+            lhs = Relation(op: op, expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func additionExpression() -> Expression {
+        var lhs = self.multiplicationExpression()
+        while lookahead == .Plus || lookahead == .Minus {
+            let op = lookahead
+            self.match(.Less, .LEqual, .Greater, .GEqual)
+            let rhs = self.multiplicationExpression()
+            lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func multiplicationExpression() -> Expression {
+        var lhs = self.unaryExpression()
+        while lookahead == .Times || lookahead == .Divide {
+            let op = lookahead
+            self.match(.Times, .Divide)
+            let rhs = self.unaryExpression()
+            lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs)
+        }
+        return lhs
+    }
+
+    func unaryExpression() -> Expression {
+        if lookahead == .Minus {
+            self.match(.Minus)
+            switch lookahead {
+            case .Integer(let val):
+                return Constant(intVal: -val!)
+            case .Decimal(let val):
+                return Constant(floatVal: -val!)
+            default:
+                let expr = self.unaryExpression()
+                if expr is Unary && expr.op == .Minus {
+                    return (expr as Unary).expr
+                }
+                return Unary(op: .Minus, expr: expr)
+            }
+        }
+        else if lookahead == .Not {
+            self.match(.Not)
+            let expr = self.unaryExpression()
+            if expr is Not {
+                return (expr as Not).expr1
+            }
+            return Not(op: .Not, expr: expr)
+        }
+        else {
+            return self.expression()
+        }
+    }
+
+    func callExpression() -> Expression {
+        self.match(.LBrack)
+        let idTok = lookahead
+        self.match(.Identifier(nil))
+        let id = topScope.identifierForToken(idTok)
+        var args: [Expression] = []
+        if globalScope.prototypeForToken(idTok).args.count > 0 {
+            self.match(.Colon)
+            while (true) {
+                let expr = self.orExpression()
+                args.append(expr)
+                if lookahead == .RBrack {
+                    break
+                }
+                self.match(.Comma)
+            }
+        }
+        self.match(.RBrack)
+        return Call(id: id, args: args)
+    }
+
+    func constantExpression() -> Expression {
+        switch lookahead {
+        case .Integer(let val):
+            self.match(.Integer(nil))
+            return Constant(intVal: val!)
+        case .Decimal(let val):
+            self.match(.Decimal(nil))
+            return Constant(floatVal: val!)
+        case .Boolean(let val):
+            self.match(.Boolean(nil))
+            return Constant(boolVal: val!)
+        default:
+            error("expected constant", lexer.line)
+        }
+    }
 }
