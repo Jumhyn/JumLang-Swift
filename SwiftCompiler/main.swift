@@ -13,3 +13,4 @@ var lex = Lexer(file: "/Users/freddy/Development/Xcode Projects/SwiftCompiler/Sw
 var parser = Parser(lex)
 
 var funcs = parser.program()
+println(funcs)

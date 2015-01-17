@@ -85,8 +85,10 @@ class Parser {
     }
 
     func type() -> TypeBase {
+        //match a type token and return the corresponding type
         switch lookahead {
         case .Type(let type):
+            match(.Type(nil))
             return type!
         default:
             error("expected type", lexer.line)
@@ -94,7 +96,8 @@ class Parser {
     }
 
     func match(token: Token) {
-        if (lookahead == token || token == .Any) {
+        //match a specific token
+        if (token == lookahead || token == .Any) {
             lookahead = lexer.nextToken()
         }
         else {
@@ -103,6 +106,7 @@ class Parser {
     }
 
     func match(tokens: Token ...) {
+        //match any one of multiple tokens
         if (contains(tokens, lookahead) || contains(tokens, .Any)) {
             lookahead = lexer.nextToken()
         }
@@ -125,18 +129,50 @@ extension Parser {
             return self.doWhileStatement()
         case .Return:
             return self.returnStatement()
+        case .Type(_):
+            //a type indicates either a bare declaration, or an
+            //initialization
+            let type = self.type()
+            let idTok = lookahead
+            self.match(.Identifier(nil))
+            switch lookahead {
+            case .Semi:
+                let id = Identifier(op: idTok, type: type, offset: 0)
+                topScope.setIdentifier(id, forToken: idTok)
+                self.match(.Semi)
+                return self.statement()
+            case .Assign:
+                let id = Identifier(op: idTok, type: type, offset: 0)
+                topScope.setIdentifier(id, forToken: idTok)
+                self.match(.Assign)
+                let expr = self.orExpression()
+                self.match(.Semi)
+                return Assignment(id: id, expr: expr)
+            default:
+                error("expected variable declaration", lexer.line)
+            }
+        case .LBrack:
+            //the beginning of a call
+            let expr = self.callExpression()
+            return Expratement(expr: expr)
+        case .LBrace:
+            return self.block()
         default:
             return self.assignment()
         }
     }
 
     func block() -> Statement {
+        //a block is just a sequence with its own scope
         self.match(.LBrace)
-        let savedScope = topScope
-        topScope = Scope(previousScope: savedScope, globalScope: globalScope)
+
+        //save the current scope and create a new one
+        topScope = Scope(previousScope: topScope, globalScope: globalScope)
         if let stmt = self.sequence() {
             self.match(.RBrace)
-            topScope = savedScope
+
+            //restore the scope
+            topScope = topScope.previousScope!
             return stmt
         }
         error("expected statement", lexer.line)

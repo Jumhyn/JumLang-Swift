@@ -9,7 +9,7 @@
 import Foundation
 
 func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
-    return lhs.width == rhs.width && lhs.isNumeric !^ rhs.isNumeric
+    return lhs.width == rhs.width && (lhs.isNumeric !^ rhs.isNumeric)
 }
 
 func ==(lhs: TypeBase?, rhs: TypeBase?) -> Bool {
