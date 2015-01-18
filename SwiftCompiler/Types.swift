@@ -49,13 +49,17 @@ func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
     }
 }
 
-class TypeBase {
+class TypeBase : LLVMPrintable {
     var isNumeric: Bool = false
     var width: UInt = 0
 
     init(_ isNumeric: Bool, _ width: UInt) {
         self.isNumeric = isNumeric
         self.width = width
+    }
+
+    func LLVMString() -> String {
+        return "i32"
     }
 
     class func voidType() -> TypeBase {

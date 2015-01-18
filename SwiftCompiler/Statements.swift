@@ -9,7 +9,9 @@
 import Foundation
 
 class Statement: Node {
-
+    func generateLLVM(gen: Generator) {
+        
+    }
 }
 
 class Sequence: Statement {

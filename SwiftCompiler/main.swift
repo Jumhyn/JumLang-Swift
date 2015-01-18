@@ -14,3 +14,6 @@ var parser = Parser(lex)
 
 var funcs = parser.program()
 println(funcs)
+
+var gen = Generator()
+gen.generateLLVM(funcs)

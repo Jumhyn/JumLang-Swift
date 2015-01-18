@@ -34,6 +34,14 @@ extension String {
     }
 }
 
+extension String {
+    mutating func extendLn(other: String) {
+        self.extend(other)
+        let newLine: Character = "\n"
+        self.append(newLine)
+    }
+}
+
 extension Character : BooleanType {
     public var boolValue: Bool {
         return self != "\0"

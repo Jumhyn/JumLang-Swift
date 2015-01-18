@@ -18,12 +18,24 @@ class Prototype {
     }
 }
 
-class Function {
+class Function : Statement {
     var signature: Prototype
     var body: Statement
 
     init(_ signature: Prototype, _ body: Statement) {
         self.signature = signature
         self.body = body
+    }
+
+    override func generateLLVM(gen: Generator) {
+        var signatureString = "define \(self.signature.id.type.LLVMString()) \(self.signature.id.LLVMString()) ("
+        for arg in self.signature.args {
+            signatureString.extend("\(arg.type.LLVMString()) %\(arg.op.LLVMString())")
+            if find(self.signature.args, arg) < self.signature.args.count {
+                signatureString.extend(",")
+            }
+        }
+        signatureString.extend(") {")
+        gen.appendInstruction(signatureString)
     }
 }

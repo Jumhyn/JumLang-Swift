@@ -241,7 +241,7 @@ func ==(lhs: Token, rhs: Token) -> Bool {
     }
 }
 
-enum Token : Streamable, Printable, Hashable {
+enum Token {
     case Any
 
     case Plus, Minus, Times, Divide
@@ -269,98 +269,6 @@ enum Token : Streamable, Printable, Hashable {
     case Array, Index
 
     case Unknown
-
-    var description: String {
-    switch self {
-    case .Any:
-        return "wildcard"
-
-    case .Plus:
-        return "+"
-    case .Minus:
-        return "-"
-    case .Times:
-        return "*"
-    case .Divide:
-        return "/"
-    case .Less:
-        return "<"
-    case .LEqual:
-        return "<="
-    case .Equal:
-        return "=="
-    case .GEqual:
-        return ">="
-    case .Greater:
-        return ">"
-    case .Not:
-        return "!"
-    case .NEqual:
-        return "!="
-    case .Assign:
-        return "="
-    case .And:
-        return "&&"
-    case .Or:
-        return "||"
-    case .LBrace:
-        return "{"
-    case .RBrace:
-        return "}"
-    case .LParen:
-        return "("
-    case .RParen:
-        return ")"
-    case .LBrack:
-        return "["
-    case .RBrack:
-        return "]"
-    case .Colon:
-        return ":"
-    case .Semi:
-        return ";"
-    case .Comma:
-        return ","
-    case .Dot:
-        return "."
-
-    case .If:
-        return "if"
-    case .Else:
-        return "else"
-    case .While:
-        return "while"
-    case .Do:
-        return "do"
-    case .Break:
-        return "break"
-    case .Return:
-        return "return"
-
-    case .Identifier(let id):
-        return "identifier: \(id)"
-    case .Boolean(let bool):
-        return "boolean: \(bool)"
-    case .Integer(let int):
-        return "integer: \(int)"
-    case .Decimal(let dec):
-        return "decimal: \(dec)"
-    case .StringLiteral(let str):
-        return "string: '\(str)'"
-    case .Type(let type):
-        return "type: \(type)"
-
-    case .Array, .Index:
-        return "array/index operator"
-
-    case .Unknown:
-        return "unknown token"
-        }
-    }
-
-    var hashValue: Int {
-        return self.description.hashValue
-    }
 
     init(_ value: String) {
         switch value {
@@ -421,8 +329,110 @@ enum Token : Streamable, Printable, Hashable {
     init (_ value: Character) {
         self.init(String(value))
     }
+}
+
+extension Token : Printable, Streamable {
+    var description: String {
+        switch self {
+        case .Any:
+            return "wildcard"
+
+        case .Plus:
+            return "+"
+        case .Minus:
+            return "-"
+        case .Times:
+            return "*"
+        case .Divide:
+            return "/"
+        case .Less:
+            return "<"
+        case .LEqual:
+            return "<="
+        case .Equal:
+            return "=="
+        case .GEqual:
+            return ">="
+        case .Greater:
+            return ">"
+        case .Not:
+            return "!"
+        case .NEqual:
+            return "!="
+        case .Assign:
+            return "="
+        case .And:
+            return "&&"
+        case .Or:
+            return "||"
+        case .LBrace:
+            return "{"
+        case .RBrace:
+            return "}"
+        case .LParen:
+            return "("
+        case .RParen:
+            return ")"
+        case .LBrack:
+            return "["
+        case .RBrack:
+            return "]"
+        case .Colon:
+            return ":"
+        case .Semi:
+            return ";"
+        case .Comma:
+            return ","
+        case .Dot:
+            return "."
+
+        case .If:
+            return "if"
+        case .Else:
+            return "else"
+        case .While:
+            return "while"
+        case .Do:
+            return "do"
+        case .Break:
+            return "break"
+        case .Return:
+            return "return"
+
+        case .Identifier(let id):
+            return "\(id!)"
+        case .Boolean(let bool):
+            return "\(bool)"
+        case .Integer(let int):
+            return "\(int!)"
+        case .Decimal(let dec):
+            return "\(dec!)"
+        case .StringLiteral(let str):
+            return "\"\(str!)\""
+        case .Type(let type):
+            return "\(type!)"
+            
+        case .Array, .Index:
+            return "array/index operator"
+            
+        case .Unknown:
+            return "unknown token"
+        }
+    }
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
         target.write(self.description);
+    }
+}
+
+extension Token : Hashable {
+    var hashValue: Int {
+        return self.description.hashValue
+    }
+}
+
+extension Token : LLVMPrintable {
+    func LLVMString() -> String {
+        return self.description
     }
 }

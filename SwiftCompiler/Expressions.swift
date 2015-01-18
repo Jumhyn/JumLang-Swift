@@ -27,7 +27,18 @@ class Expression: Node {
     }
 }
 
-class Identifier: Expression {
+func ==(lhs: Identifier, rhs: Identifier) -> Bool {
+    if lhs.offset == rhs.offset
+        && lhs.isArgument == rhs.isArgument
+        && lhs.enclosingFuncName == rhs.enclosingFuncName
+        && lhs.scopeNumber == rhs.scopeNumber
+        && lhs.op == rhs.op {
+        return true
+    }
+    return false
+}
+
+class Identifier: Expression, Equatable {
     var offset = 0
     var isAllocated = false
     var isArgument = false
@@ -38,6 +49,12 @@ class Identifier: Expression {
     init(op: Token, type: TypeBase, offset: Int) {
         self.offset = offset
         super.init(op: op, type: type)
+    }
+
+    func LLVMString() -> String {
+        var prefix = isGlobal ? "@" : "%"
+        var postfix = isArgument ? ".arg" : ".\(enclosingFuncName).\(scopeNumber)"
+        return "\(prefix)\(op)\(postfix)"
     }
 }
 

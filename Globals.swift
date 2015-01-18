@@ -31,3 +31,7 @@ infix operator !^ {
 func !^(lhs: Bool, rhs: Bool) -> Bool {
     return !(lhs ^ rhs)
 }
+
+protocol LLVMPrintable {
+    func LLVMString() -> String
+}
