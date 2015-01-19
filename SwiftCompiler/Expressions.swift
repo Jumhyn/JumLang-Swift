@@ -90,13 +90,21 @@ class Constant: Expression {
     init (floatVal val: Double) {
         super.init(op: .Decimal(val), type: TypeBase.floatType())
     }
+}
 
+class Logical: Expression {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+
+    }
+}
+
+class BooleanConstant: Logical {
     init(boolVal val: Bool) {
         super.init(op: .Boolean(val), type: TypeBase.boolType())
     }
 }
 
-class Logical: Expression {
+class And: Logical {
     var expr1: Expression
     var expr2: Expression
 
@@ -106,31 +114,60 @@ class Logical: Expression {
         super.init(op: op, type:  TypeBase.boolType())
         //TODO: Add type checking
         if (expr1.type == expr2.type) {
-            
+
         }
     }
-}
 
-class And: Logical {
-    init(expr1: Expression, expr2: Expression) {
-        super.init(op: .And, expr1: expr1, expr2: expr2)
+    convenience init(expr1: Expression, expr2: Expression) {
+        self.init(op: .And, expr1: expr1, expr2: expr2)
     }
 }
 
 class Or: Logical {
-    init(expr1: Expression, expr2: Expression) {
-        super.init(op: .Or, expr1: expr1, expr2: expr2)
+    var expr1: Expression
+    var expr2: Expression
+
+    init(op: Token, expr1: Expression, expr2: Expression) {
+        self.expr1 = expr1
+        self.expr2 = expr2
+        super.init(op: op, type:  TypeBase.boolType())
+        //TODO: Add type checking
+        if (expr1.type == expr2.type) {
+
+        }
+    }
+
+    convenience init(expr1: Expression, expr2: Expression) {
+        self.init(op: .Or, expr1: expr1, expr2: expr2)
     }
 }
 
 class Not: Logical {
-    init(op: Token, expr: Expression) {
-        super.init(op: op, expr1: expr, expr2: expr)
+    var expr: Logical
+
+    init(op: Token, expr: Logical) {
+        self.expr = expr
+        super.init(op: op, type: TypeBase.boolType())
+    }
+
+    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+        expr.generateLLVMBranchesWithGenerator(gen, trueLabel: falseLabel, falseLabel: trueLabel)
     }
 }
 
 class Relation: Logical {
+    var expr1: Expression
+    var expr2: Expression
 
+    init(op: Token, expr1: Expression, expr2: Expression) {
+        self.expr1 = expr1
+        self.expr2 = expr2
+        super.init(op: op, type:  TypeBase.boolType())
+        //TODO: Add type checking
+        if (expr1.type == expr2.type) {
+
+        }
+    }
 }
 
 class Call: Expression {

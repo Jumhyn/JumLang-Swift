@@ -26,9 +26,9 @@ class Generator {
         output.extendLn(code)
     }
 
-    func generateLLVM(program: [Function]) {
+    func generateLLVMForProgram(program: [Function]) {
         for function in program {
-            function.generateLLVM(self)
+            function.generateLLVMWithGenerator(self)
         }
     }
 }

@@ -18,7 +18,7 @@ class Prototype {
     }
 }
 
-class Function : Statement {
+class Function : Node {
     var signature: Prototype
     var body: Statement
 
@@ -27,15 +27,20 @@ class Function : Statement {
         self.body = body
     }
 
-    override func generateLLVM(gen: Generator) {
+    override func generateLLVMWithGenerator(gen: Generator) {
         var signatureString = "define \(self.signature.id.type.LLVMString()) \(self.signature.id.LLVMString()) ("
-        for arg in self.signature.args {
+        for arg in signature.args {
             signatureString.extend("\(arg.type.LLVMString()) %\(arg.op.LLVMString())")
-            if find(self.signature.args, arg) < self.signature.args.count {
+            if find(signature.args, arg) < signature.args.count {
                 signatureString.extend(",")
             }
         }
         signatureString.extend(") {")
         gen.appendInstruction(signatureString)
+
+        var before = gen.reserveLabel(), after = gen.reserveLabel()
+
+        gen.appendLabel(before)
+        body.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
     }
 }

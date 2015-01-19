@@ -9,8 +9,16 @@
 import Foundation
 
 class Statement: Node {
-    func generateLLVM(gen: Generator) {
+    func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         
+    }
+
+    func needsBeforeLabel() -> Bool {
+        return false
+    }
+
+    func needsAfterLabel() -> Bool {
+        return false
     }
 }
 
@@ -31,42 +39,112 @@ class Sequence: Statement {
         self.stmt1 = stmt1
         self.stmt2 = stmt2Opt
     }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        if let stmt2Unwrapped = stmt2 {
+            let between = gen.reserveLabel()
+            stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: between)
+            if stmt1.needsAfterLabel() || stmt2Unwrapped.needsBeforeLabel() {
+                gen.appendLabel(between)
+            }
+            stmt2Unwrapped.generateLLVMWithGenerator(gen, beforeLabel: between, afterLabel: after)
+        }
+        else {
+            stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
+        }
+    }
+
+    override func needsBeforeLabel() -> Bool {
+        return stmt1.needsBeforeLabel()
+    }
+
+    override func needsAfterLabel() -> Bool {
+        if let stmt2Unwrapped = stmt2 {
+            return stmt2Unwrapped.needsAfterLabel()
+        }
+        return stmt1.needsAfterLabel()
+    }
 }
 
 class If: Statement {
-    var expr: Expression
+    var expr: Logical
     var stmt: Statement
     var elseStmt: Statement?
 
-    init(expr: Expression, stmt: Statement) {
+    init(expr: Logical, stmt: Statement) {
         self.expr = expr
         self.stmt = stmt
     }
 
-    init(expr: Expression, stmt: Statement, elseStmt: Statement) {
+    init(expr: Logical, stmt: Statement, elseStmt: Statement) {
         self.expr = expr
         self.stmt = stmt
         self.elseStmt = elseStmt
     }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        let label = gen.reserveLabel()
+        if let elseStmtUnwrapped = elseStmt {
+            let elseLabel = gen.reserveLabel()
+            expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: elseLabel)
+            gen.appendLabel(label)
+            stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
+            gen.appendInstruction("br label %\(after)")
+            gen.appendLabel(elseLabel)
+            elseStmtUnwrapped.generateLLVMWithGenerator(gen, beforeLabel: elseLabel, afterLabel: after)
+        }
+        else {
+            expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: after)
+            gen.appendLabel(label)
+            stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
+        }
+    }
+
+    override func needsAfterLabel() -> Bool {
+        return true
+    }
 }
 
 class While: Statement {
-    var expr: Expression
+    var expr: Logical
     var stmt: Statement
 
-    init(expr: Expression, stmt: Statement) {
+    init(expr: Logical, stmt: Statement) {
         self.expr = expr
         self.stmt = stmt
+    }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        let label = gen.reserveLabel()
+        expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: after)
+        gen.appendLabel(label)
+        stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
+        gen.appendInstruction("br label %\(before)")
     }
 }
 
 class DoWhile: Statement {
     var stmt: Statement
-    var expr: Expression
+    var expr: Logical
 
-    init(stmt: Statement, expr: Expression) {
+    init(stmt: Statement, expr: Logical) {
         self.stmt = stmt
         self.expr = expr
+    }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        var label = gen.reserveLabel()
+        stmt.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: label)
+        gen.appendLabel(label)
+        expr.generateLLVMBranchesWithGenerator(gen, trueLabel: before, falseLabel: after)
+    }
+
+    override func needsBeforeLabel() -> Bool {
+        return true
+    }
+
+    override func needsAfterLabel() -> Bool {
+        return true
     }
 }
 

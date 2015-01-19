@@ -192,18 +192,24 @@ extension Parser {
     func ifStatement() -> If {
         self.match(.If)
         let expr = self.expression()
+        if !(expr is Logical) {
+            error("expected expression with boolean result", lexer.line)
+        }
         let stmt = self.statement()
         if self.lookahead == .Else {
             self.match(.Else)
-            return If(expr: expr, stmt: stmt, elseStmt: self.statement())
+            return If(expr: expr as Logical, stmt: stmt, elseStmt: self.statement())
         }
-        return If(expr: expr, stmt: stmt)
+        return If(expr: expr as Logical, stmt: stmt)
     }
 
     func whileStatement() -> While {
         self.match(.While)
         let expr = self.expression()
-        return While(expr: expr, stmt: self.statement())
+        if !(expr is Logical) {
+            error("expected expression with boolean result", lexer.line)
+        }
+        return While(expr: expr as Logical, stmt: self.statement())
     }
 
     func doWhileStatement() -> DoWhile {
@@ -211,8 +217,11 @@ extension Parser {
         let stmt = self.statement()
         self.match(.While)
         let expr = self.expression()
+        if !(expr is Logical) {
+            error("expected expression with boolean result", lexer.line)
+        }
         self.match(.Semi)
-        return DoWhile(stmt: stmt, expr: expr)
+        return DoWhile(stmt: stmt, expr: expr as Logical)
     }
 
     func returnStatement() -> Return {
@@ -346,9 +355,12 @@ extension Parser {
             self.match(.Not)
             let expr = self.unaryExpression()
             if expr is Not {
-                return (expr as Not).expr1
+                return (expr as Not).expr
             }
-            return Not(op: .Not, expr: expr)
+            if !(expr is Logical) {
+                error("expected expression with boolean result", lexer.line)
+            }
+            return Not(op: .Not, expr: expr as Logical)
         }
         else {
             return self.expression()
@@ -386,7 +398,7 @@ extension Parser {
             return Constant(floatVal: val!)
         case .Boolean(let val):
             self.match(.Boolean(nil))
-            return Constant(boolVal: val!)
+            return BooleanConstant(boolVal: val!)
         default:
             error("expected constant", lexer.line)
         }

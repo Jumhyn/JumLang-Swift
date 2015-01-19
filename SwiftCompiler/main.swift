@@ -16,4 +16,4 @@ var funcs = parser.program()
 println(funcs)
 
 var gen = Generator()
-gen.generateLLVM(funcs)
+gen.generateLLVMForProgram(funcs)
