@@ -11,11 +11,16 @@ import Foundation
 typealias Label = UInt
 
 class Generator {
-    var currentLabel: UInt = 0
+    var currentLabel: Label = 1
+    var tempCount: UInt = 0
     var output = ""
 
     func reserveLabel() -> Label {
         return currentLabel++
+    }
+
+    func getTemporaryOfType(type: TypeBase) -> Temporary {
+        return Temporary(number: tempCount++, type: type)
     }
 
     func appendLabel(label: Label) {

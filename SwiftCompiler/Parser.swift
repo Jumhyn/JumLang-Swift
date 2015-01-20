@@ -81,6 +81,7 @@ class Parser {
 
         //create the identifier for the function and return the prototype
         let funcId = Identifier(op: funcIdTok, type: funcType, offset: 0)
+        funcId.isGlobal = true
         return Prototype(funcId, args)
     }
 
@@ -276,7 +277,10 @@ extension Parser {
         while lookahead == .Or {
             self.match(.Or)
             let rhs = self.andExpression()
-            lhs = Or(expr1: lhs, expr2: rhs)
+            if !(lhs is Logical && rhs is Logical) {
+                error("expected expression with boolean result", lexer.line)
+            }
+            lhs = Or(expr1: lhs as Logical, expr2: rhs as Logical)
         }
         return lhs
     }
@@ -286,7 +290,10 @@ extension Parser {
         while lookahead == .And {
             self.match(.And)
             let rhs = self.equalityExpression()
-            lhs = And(expr1: lhs, expr2: rhs)
+            if !(lhs is Logical && rhs is Logical) {
+                error("expected expression with boolean result", lexer.line)
+            }
+            lhs = And(expr1: lhs as Logical, expr2: rhs as Logical)
         }
         return lhs
     }

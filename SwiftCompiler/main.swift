@@ -11,9 +11,8 @@ import Foundation
 var lex = Lexer(file: "/Users/freddy/Development/Xcode Projects/SwiftCompiler/SwiftCompiler/JumTest.jum")
 
 var parser = Parser(lex)
-
 var funcs = parser.program()
-println(funcs)
 
 var gen = Generator()
 gen.generateLLVMForProgram(funcs)
+println(gen.output)

@@ -121,6 +121,14 @@ class While: Statement {
         stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
         gen.appendInstruction("br label %\(before)")
     }
+
+    override func needsBeforeLabel() -> Bool {
+        return true
+    }
+
+    override func needsAfterLabel() -> Bool {
+        return true
+    }
 }
 
 class DoWhile: Statement {
@@ -156,6 +164,15 @@ class Assignment: Statement {
         self.id = id
         self.expr = expr
     }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        if !id.allocated {
+            gen.appendInstruction("\(id.LLVMString()) = alloca \(id.type.LLVMString())")
+            id.allocated = true
+        }
+        let reduced = expr.reduceWithGenerator(gen)
+        gen.appendInstruction("store \(reduced.type.LLVMString()) \(reduced.LLVMString()), \(id.type.LLVMString())* \(id.LLVMString())")
+    }
 }
 
 class Return: Statement {
@@ -170,6 +187,16 @@ class Return: Statement {
         self.expr = expr
         self.from = from
     }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        if let exprUnwrapped = expr {
+            let reduced = exprUnwrapped.reduceWithGenerator(gen)
+            gen.appendInstruction("ret \(reduced.type.LLVMString()) \(reduced.LLVMString())")
+        }
+        else {
+            gen.appendInstruction("ret void")
+        }
+    }
 }
 
 class Expratement: Statement {
@@ -177,5 +204,9 @@ class Expratement: Statement {
 
     init(expr: Expression) {
         self.expr = expr
+    }
+
+    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        expr.reduceWithGenerator(gen)
     }
 }

@@ -171,17 +171,6 @@ func ==(lhs: Token, rhs: Token) -> Bool {
         default: return false
         }
 
-    case .Array:
-        switch rhs {
-        case .Array: return true
-        default: return false
-        }
-    case .Index:
-        switch rhs {
-        case .Index: return true
-        default: return false
-        }
-
     case let .Identifier(lid):
         switch rhs {
         case let .Identifier(rid):
@@ -236,6 +225,18 @@ func ==(lhs: Token, rhs: Token) -> Bool {
             return rtype == ltype
         default: return false
         }
+
+    case .Array:
+        switch rhs {
+        case .Array: return true
+        default: return false
+        }
+    case .Index:
+        switch rhs {
+        case .Index: return true
+        default: return false
+        }
+        
     default:
         return false
     }
@@ -255,6 +256,8 @@ enum Token {
     case Colon, Semi, Comma, Dot
 
     case If, Else, While, Do, Break, Return
+
+    case Temp
 
     //associated values are optional types so that
     //(for example) .Identifier(nil) will match *any*
@@ -399,6 +402,9 @@ extension Token : Printable, Streamable {
         case .Return:
             return "return"
 
+        case .Temp:
+            return "t"
+
         case .Identifier(let id):
             return "\(id!)"
         case .Boolean(let bool):
@@ -433,6 +439,31 @@ extension Token : Hashable {
 
 extension Token : LLVMPrintable {
     func LLVMString() -> String {
-        return self.description
+        switch self {
+        case .Plus:
+            return "add"
+        case .Minus:
+            return "sub"
+        case .Times:
+            return "mul"
+        case .Divide:
+            return "div"
+
+        case .Equal:
+            return "eq"
+        case .NEqual:
+            return "ne"
+        case .Less:
+            return "lt"
+        case .LEqual:
+            return "le"
+        case .GEqual:
+            return "ge"
+        case .Greater:
+            return "gt"
+
+        default:
+            return self.description
+        }
     }
 }
