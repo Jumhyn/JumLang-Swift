@@ -15,6 +15,10 @@ func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
         && lhs.floatingPoint == rhs.floatingPoint
 }
 
+func !=(lhs: TypeBase, rhs: TypeBase) -> Bool {
+    return !(lhs == rhs)
+}
+
 func ==(lhs: TypeBase?, rhs: TypeBase?) -> Bool {
     if let lhsUnwrapped = lhs {
         if let rhsUnwrapped = rhs {

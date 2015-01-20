@@ -12,8 +12,9 @@ typealias Label = UInt
 
 class Generator {
     var currentLabel: Label = 1
-    var tempCount: UInt = 0
+    var tempCount: UInt = 1
     var output = ""
+    var betweenBlocks = false
 
     func reserveLabel() -> Label {
         return currentLabel++
@@ -24,10 +25,19 @@ class Generator {
     }
 
     func appendLabel(label: Label) {
+        if !betweenBlocks {
+            output.extendLn("br label %L\(label)")
+        }
         output.extendLn("%L\(label):")
     }
 
     func appendInstruction(code: String) {
+        if code.endsBasicBlock() {
+            betweenBlocks = true
+        }
+        else {
+            betweenBlocks = false
+        }
         output.extendLn(code)
     }
 

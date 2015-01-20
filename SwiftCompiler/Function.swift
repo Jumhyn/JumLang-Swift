@@ -39,8 +39,13 @@ class Function : Node {
         gen.appendInstruction(signatureString)
 
         var before = gen.reserveLabel(), after = gen.reserveLabel()
-
-        gen.appendLabel(before)
+        if body.needsBeforeLabel() {
+            gen.appendLabel(before)
+        }
         body.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
+        if body.needsAfterLabel() {
+            gen.appendLabel(after)
+        }
+        gen.appendInstruction("}")
     }
 }

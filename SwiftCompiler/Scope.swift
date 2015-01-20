@@ -11,6 +11,7 @@ import Foundation
 class Scope {
     var symTable: [Token : Identifier] = [:]
     var funcTable: [Token : Prototype] = [:]
+    var scopeCount: UInt = 0
     var previousScope: Scope? = nil
 
     unowned var globalScope: Scope
@@ -30,6 +31,7 @@ class Scope {
     init(previousScope: Scope, globalScope: Scope) {
         self.previousScope = previousScope
         self.globalScope = globalScope
+        self.globalScope.scopeCount++
     }
 
     func identifierForToken(token: Token) -> Identifier {

@@ -33,7 +33,7 @@ class Expression: Node, Printable {
     func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
         let reduced = self.reduceWithGenerator(gen)
         if type == to {
-            return self.reduceWithGenerator(gen)
+            return reduced
         }
         else {
             let temp = gen.getTemporaryOfType(to)
@@ -54,6 +54,9 @@ class Expression: Node, Printable {
                     opString = "trunc"
                 }
             }
+            if opString == "" {
+                error("can't convert \(type) to \(to)", lineNumber)
+            }
             gen.appendInstruction("\(temp.LLVMString()) = \(opString) \(type.LLVMString()) \(reduced.LLVMString()) to \(to.LLVMString())")
             return temp
         }
@@ -68,7 +71,7 @@ extension Expression: Printable, Streamable {
     //TODO: Move 'description' getter to this extension
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
-        target.write(self.description)
+        target.write(self.LLVMString())
     }
 }
 
@@ -174,10 +177,52 @@ class Unary: Operator {
 class Constant: Expression {
     init(intVal val: Int) {
         super.init(op: .Integer(val), type: TypeBase.intType())
+        if val >= Int(CHAR_MIN) && val <= Int(CHAR_MAX) {
+            type = TypeBase.charType()
+        }
     }
 
     init(floatVal val: Double) {
         super.init(op: .Decimal(val), type: TypeBase.floatType())
+    }
+
+    override init(op: Token, type: TypeBase) {
+        super.init(op: op, type: type)
+    }
+
+    override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
+        if to != type {
+            type = to
+            if to == TypeBase.charType() {
+                switch op {
+                case .Integer(let val):
+                    op = .Integer(Int(Int8(val!)))
+                case .Decimal(let val):
+                    op = .Integer(Int(Int8(val!)))
+                default:
+                    return super.convertTo(to, withGenerator: gen)
+                }
+            }
+            else if to == TypeBase.intType() {
+                switch op {
+                case .Integer(_):
+                    break
+                case .Decimal(let val):
+                    op = .Integer(Int(val!))
+                default:
+                    return super.convertTo(to, withGenerator: gen)
+                }
+            }
+            else if to == TypeBase.floatType() {
+                switch op {
+                case .Integer(let val):
+                    op = .Decimal(Double(val!))
+                default:
+                    return super.convertTo(to, withGenerator: gen)
+                }
+            }
+        }
+        return self
     }
 }
 

@@ -140,12 +140,14 @@ extension Parser {
             case .Semi:
                 let id = Identifier(op: idTok, type: type, offset: 0)
                 id.enclosingFuncName = currentFunc.id.op.description
+                id.scopeNumber = globalScope.scopeCount
                 topScope.setIdentifier(id, forToken: idTok)
                 self.match(.Semi)
                 return self.statement()
             case .Assign:
                 let id = Identifier(op: idTok, type: type, offset: 0)
                 id.enclosingFuncName = currentFunc.id.op.description
+                id.scopeNumber = globalScope.scopeCount
                 topScope.setIdentifier(id, forToken: idTok)
                 self.match(.Assign)
                 let expr = self.orExpression()

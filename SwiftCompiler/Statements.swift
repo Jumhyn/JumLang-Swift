@@ -170,7 +170,7 @@ class Assignment: Statement {
             gen.appendInstruction("\(id.LLVMString()) = alloca \(id.type.LLVMString())")
             id.allocated = true
         }
-        let reduced = expr.reduceWithGenerator(gen)
+        let reduced = expr.convertTo(id.type, withGenerator: gen)
         gen.appendInstruction("store \(reduced.type.LLVMString()) \(reduced.LLVMString()), \(id.type.LLVMString())* \(id.LLVMString())")
     }
 }
@@ -190,7 +190,7 @@ class Return: Statement {
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         if let exprUnwrapped = expr {
-            let reduced = exprUnwrapped.reduceWithGenerator(gen)
+            let reduced = exprUnwrapped.convertTo(from.id.type, withGenerator: gen)
             gen.appendInstruction("ret \(reduced.type.LLVMString()) \(reduced.LLVMString())")
         }
         else {
