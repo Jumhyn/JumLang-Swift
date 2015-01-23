@@ -17,9 +17,10 @@ class Expression: Node, Printable {
         return op.description
     }
 
-    init(op: Token, type: TypeBase) {
+    init(op: Token, type: TypeBase, line: UInt) {
         self.op = op
         self.type = type
+        super.init(line: line)
     }
 
     func generateRHS() -> Expression {
@@ -55,7 +56,7 @@ class Expression: Node, Printable {
                 }
             }
             if opString == "" {
-                error("can't convert \(type) to \(to)", lineNumber)
+                error("can't convert \(type) to \(to)", line)
             }
             gen.appendInstruction("\(temp.LLVMString()) = \(opString) \(type.LLVMString()) \(reduced.LLVMString()) to \(to.LLVMString())")
             return temp
@@ -82,9 +83,9 @@ class Temporary: Expression {
         return "%t.\(number)"
     }
 
-    init(number: UInt, type: TypeBase) {
+    init(number: UInt, type: TypeBase, line: UInt) {
         self.number = number
-        super.init(op: .Temp, type: type)
+        super.init(op: .Temp, type: type, line: line)
     }
 }
 
@@ -111,9 +112,9 @@ class Identifier: Expression, Equatable {
         return op.description
     }
 
-    init(op: Token, type: TypeBase, offset: Int) {
+    init(op: Token, type: TypeBase, offset: Int, line: UInt) {
         self.offset = offset
-        super.init(op: op, type: type)
+        super.init(op: op, type: type, line: line)
     }
 
     override func LLVMString() -> String {
@@ -149,17 +150,17 @@ class Arithmetic: Operator {
         return "\(opString) \(type.LLVMString()) \(expr1.LLVMString()), \(expr2.LLVMString())"
     }
 
-    init(op: Token, expr1: Expression, expr2: Expression) {
+    init(op: Token, expr1: Expression, expr2: Expression, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type: Type_max(expr1.type, expr2.type))
+        super.init(op: op, type: Type_max(expr1.type, expr2.type), line: line)
     }
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
         let reduced1 = expr1.reduceWithGenerator(gen)
         let reduced2 = expr2.reduceWithGenerator(gen)
         let temp = gen.getTemporaryOfType(type)
-        let result = Arithmetic(op: op, expr1: reduced1, expr2: reduced2)
+        let result = Arithmetic(op: op, expr1: reduced1, expr2: reduced2, line: line)
         gen.appendInstruction("\(temp.LLVMString()) = \(result.LLVMString())")
         return temp
     }
@@ -168,26 +169,26 @@ class Arithmetic: Operator {
 class Unary: Operator {
     var expr: Expression
 
-    init(op: Token, expr: Expression) {
+    init(op: Token, expr: Expression, line: UInt) {
         self.expr = expr
-        super.init(op: op, type: expr.type)
+        super.init(op: op, type: expr.type, line: line)
     }
 }
 
 class Constant: Expression {
-    init(intVal val: Int) {
-        super.init(op: .Integer(val), type: TypeBase.intType())
+    init(intVal val: Int, line: UInt) {
+        super.init(op: .Integer(val), type: TypeBase.intType(), line: line)
         if val >= Int(CHAR_MIN) && val <= Int(CHAR_MAX) {
             type = TypeBase.charType()
         }
     }
 
-    init(floatVal val: Double) {
-        super.init(op: .Decimal(val), type: TypeBase.floatType())
+    init(floatVal val: Double, line: UInt) {
+        super.init(op: .Decimal(val), type: TypeBase.floatType(), line: line)
     }
 
-    override init(op: Token, type: TypeBase) {
-        super.init(op: op, type: type)
+    override init(op: Token, type: TypeBase, line: UInt) {
+        super.init(op: op, type: type, line: line)
     }
 
     override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
@@ -226,18 +227,32 @@ class Constant: Expression {
     }
 }
 
-class Logical: Expression {
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+class ArrayLiteral: Constant {
+    var values: [Constant]
 
+    init(values: [Constant], line: UInt) {
+        self.values = values
+        super.init(op: .Unknown, type: ArrayType(elements: UInt(values.count), to: values[0].type), line: line)
+        for value in values {
+            if value.type != type {
+                error("members of an array literal must all have the same type", 0)
+            }
+        }
     }
 }
 
-class BooleanConstant: Logical {
-    init(boolVal val: Bool) {
-        super.init(op: .Boolean(val), type: TypeBase.boolType())
+@objc protocol Logical {
+    var type: TypeBase { get }
+
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label)
+}
+
+class BooleanConstant: Constant, Logical {
+    init(boolVal val: Bool, line: UInt) {
+        super.init(op: .Boolean(val), type: TypeBase.boolType(), line: line)
     }
 
-    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         switch op {
         case .Boolean(let val):
             if val! {
@@ -252,25 +267,25 @@ class BooleanConstant: Logical {
     }
 }
 
-class And: Logical {
+class And: Expression, Logical {
     var expr1: Logical
     var expr2: Logical
 
-    init(op: Token, expr1: Logical, expr2: Logical) {
+    init(op: Token, expr1: Logical, expr2: Logical, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type:  TypeBase.boolType())
+        super.init(op: op, type:  TypeBase.boolType(), line: line)
         //TODO: Add type checking
         if (expr1.type == expr2.type) {
 
         }
     }
 
-    convenience init(expr1: Logical, expr2: Logical) {
-        self.init(op: .And, expr1: expr1, expr2: expr2)
+    convenience init(expr1: Logical, expr2: Logical, line: UInt) {
+        self.init(op: .And, expr1: expr1, expr2: expr2, line: line)
     }
 
-    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         var label = (falseLabel == 0) ? gen.reserveLabel() : falseLabel
 
         expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: 0, falseLabel: label)
@@ -282,25 +297,25 @@ class And: Logical {
     }
 }
 
-class Or: Logical {
+class Or: Expression, Logical {
     var expr1: Logical
     var expr2: Logical
 
-    init(op: Token, expr1: Logical, expr2: Logical) {
+    init(op: Token, expr1: Logical, expr2: Logical, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type:  TypeBase.boolType())
+        super.init(op: op, type:  TypeBase.boolType(), line: line)
         //TODO: Add type checking
         if (expr1.type == expr2.type) {
 
         }
     }
 
-    convenience init(expr1: Logical, expr2: Logical) {
-        self.init(op: .Or, expr1: expr1, expr2: expr2)
+    convenience init(expr1: Logical, expr2: Logical, line: UInt) {
+        self.init(op: .Or, expr1: expr1, expr2: expr2, line: line)
     }
 
-    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         var label = (trueLabel == 0) ? gen.reserveLabel() : trueLabel
 
         expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: 0)
@@ -312,34 +327,34 @@ class Or: Logical {
     }
 }
 
-class Not: Logical {
+class Not: Expression, Logical {
     var expr: Logical
 
-    init(op: Token, expr: Logical) {
+    init(op: Token, expr: Logical, line: UInt) {
         self.expr = expr
-        super.init(op: op, type: TypeBase.boolType())
+        super.init(op: op, type: TypeBase.boolType(), line: line)
     }
 
-    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         expr.generateLLVMBranchesWithGenerator(gen, trueLabel: falseLabel, falseLabel: trueLabel)
     }
 }
 
-class Relation: Logical {
+class Relation: Expression, Logical {
     var expr1: Expression
     var expr2: Expression
 
-    init(op: Token, expr1: Expression, expr2: Expression) {
+    init(op: Token, expr1: Expression, expr2: Expression, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type:  TypeBase.boolType())
+        super.init(op: op, type:  TypeBase.boolType(), line: line)
         //TODO: Add type checking
         if (expr1.type == expr2.type) {
 
         }
     }
 
-    override func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         let maxType = Type_max(expr1.type, expr2.type)
         let reduced1 = expr1.convertTo(maxType, withGenerator: gen)
         let reduced2 = expr2.convertTo(maxType, withGenerator: gen)
@@ -369,10 +384,10 @@ class Call: Expression {
     var id: Identifier
     var args: [Expression]
 
-    init(id: Identifier, args: [Expression]) {
+    init(id: Identifier, args: [Expression], line: UInt) {
         self.id = id
         self.args = args
-        super.init(op: id.op, type: id.type)
+        super.init(op: id.op, type: id.type, line: line)
     }
 }
 

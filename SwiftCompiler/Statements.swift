@@ -26,18 +26,21 @@ class Sequence: Statement {
     var stmt1: Statement
     var stmt2: Statement? = nil
 
-    init(stmt: Statement) {
+    init(stmt: Statement, line: UInt) {
         self.stmt1 = stmt
+        super.init(line: line)
     }
 
-    init(stmt1: Statement, stmt2: Statement) {
+    init(stmt1: Statement, stmt2: Statement, line: UInt) {
         self.stmt1 = stmt1
         self.stmt2 = stmt2
+        super.init(line: line)
     }
 
-    init(stmt1: Statement, stmt2Opt: Statement?) {
+    init(stmt1: Statement, stmt2Opt: Statement?, line: UInt) {
         self.stmt1 = stmt1
         self.stmt2 = stmt2Opt
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -71,15 +74,17 @@ class If: Statement {
     var stmt: Statement
     var elseStmt: Statement?
 
-    init(expr: Logical, stmt: Statement) {
+    init(expr: Logical, stmt: Statement, line: UInt) {
         self.expr = expr
         self.stmt = stmt
+        super.init(line: line)
     }
 
-    init(expr: Logical, stmt: Statement, elseStmt: Statement) {
+    init(expr: Logical, stmt: Statement, elseStmt: Statement, line: UInt) {
         self.expr = expr
         self.stmt = stmt
         self.elseStmt = elseStmt
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -109,9 +114,10 @@ class While: Statement {
     var expr: Logical
     var stmt: Statement
 
-    init(expr: Logical, stmt: Statement) {
+    init(expr: Logical, stmt: Statement, line: UInt) {
         self.expr = expr
         self.stmt = stmt
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -135,9 +141,10 @@ class DoWhile: Statement {
     var stmt: Statement
     var expr: Logical
 
-    init(stmt: Statement, expr: Logical) {
+    init(stmt: Statement, expr: Logical, line: UInt) {
         self.stmt = stmt
         self.expr = expr
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -160,9 +167,10 @@ class Assignment: Statement {
     var id: Identifier
     var expr: Expression
 
-    init(id: Identifier, expr: Expression) {
+    init(id: Identifier, expr: Expression, line: UInt) {
         self.id = id
         self.expr = expr
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -179,13 +187,15 @@ class Return: Statement {
     var expr: Expression? = nil
     var from: Prototype
 
-    init(from: Prototype) {
+    init(from: Prototype, line: UInt) {
         self.from = from
+        super.init(line: line)
     }
 
-    init(expr: Expression, from: Prototype) {
+    init(expr: Expression, from: Prototype, line: UInt) {
         self.expr = expr
         self.from = from
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
@@ -202,8 +212,9 @@ class Return: Statement {
 class Expratement: Statement {
     var expr: Expression
 
-    init(expr: Expression) {
+    init(expr: Expression, line: UInt) {
         self.expr = expr
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {

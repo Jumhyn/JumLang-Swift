@@ -22,9 +22,10 @@ class Function : Node {
     var signature: Prototype
     var body: Statement
 
-    init(_ signature: Prototype, _ body: Statement) {
+    init(signature: Prototype, body: Statement, line: UInt) {
         self.signature = signature
         self.body = body
+        super.init(line: line)
     }
 
     override func generateLLVMWithGenerator(gen: Generator) {

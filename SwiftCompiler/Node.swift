@@ -9,7 +9,11 @@
 import Foundation
 
 class Node {
-    var lineNumber: UInt = 0
+    var line: UInt
+
+    init(line: UInt) {
+        self.line = line
+    }
 
     func generateLLVMWithGenerator(gen: Generator) {
 

@@ -10,7 +10,7 @@ import Foundation
 
 typealias Label = UInt
 
-class Generator {
+@objc class Generator {
     var currentLabel: Label = 1
     var tempCount: UInt = 1
     var output = ""
@@ -21,7 +21,7 @@ class Generator {
     }
 
     func getTemporaryOfType(type: TypeBase) -> Temporary {
-        return Temporary(number: tempCount++, type: type)
+        return Temporary(number: tempCount++, type: type, line: 0)
     }
 
     func appendLabel(label: Label) {

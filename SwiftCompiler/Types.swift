@@ -56,7 +56,7 @@ func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
     }
 }
 
-class TypeBase : LLVMPrintable {
+@objc class TypeBase : LLVMPrintable {
     var numeric = false
     var signed = true
     var floatingPoint = false
