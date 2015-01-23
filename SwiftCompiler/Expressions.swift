@@ -79,13 +79,13 @@ extension Expression: Printable, Streamable {
 class Temporary: Expression {
     var number: UInt
 
-    override var description: String {
-        return "%t.\(number)"
-    }
-
     init(number: UInt, type: TypeBase, line: UInt) {
         self.number = number
         super.init(op: .Temp, type: type, line: line)
+    }
+
+    override func LLVMString() -> String {
+        return "%t.\(number)"
     }
 }
 
@@ -120,6 +120,9 @@ class Identifier: Expression, Equatable {
     override func LLVMString() -> String {
         var prefix = isGlobal ? "@" : "%"
         var postfix = isArgument ? ".arg" : ".\(enclosingFuncName).\(scopeNumber)"
+        if isGlobal {
+            postfix = ""
+        }
         return "\(prefix)\(op)\(postfix)"
     }
 
@@ -138,7 +141,7 @@ class Arithmetic: Operator {
     var expr1: Expression
     var expr2: Expression
 
-    override var description: String {
+    override func LLVMString() -> String {
         var prefix = ""
         if self.op == .Divide {
             prefix = "s"
@@ -383,11 +386,39 @@ class Relation: Expression, Logical {
 class Call: Expression {
     var id: Identifier
     var args: [Expression]
+    var signature: Prototype
 
-    init(id: Identifier, args: [Expression], line: UInt) {
+    init(id: Identifier, args: [Expression], signature: Prototype, line: UInt) {
         self.id = id
         self.args = args
+        self.signature = signature
         super.init(op: id.op, type: id.type, line: line)
+    }
+
+    override func reduceWithGenerator(gen: Generator) -> Expression {
+        var reducedArray: [Expression] = []
+        var index = 0
+        for arg in args {
+            reducedArray.append(arg.convertTo(signature.args[index].type, withGenerator: gen))
+        }
+        self.args = reducedArray
+        let temp = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp) = \(self.LLVMString())")
+        return temp
+    }
+
+    override func LLVMString() -> String {
+        var callString = "call \(type.LLVMString()) \(id.LLVMString()) ("
+        var index = 0
+        for arg in args {
+            callString.extend("\(arg.type.LLVMString()) \(arg.LLVMString())")
+            if index < args.count-1 {
+                callString.extend(",")
+            }
+            index++
+        }
+        callString.extend(")")
+        return callString
     }
 }
 

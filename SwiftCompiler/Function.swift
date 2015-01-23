@@ -8,13 +8,14 @@
 
 import Foundation
 
-class Prototype {
+class Prototype : Node {
     var id: Identifier
     var args: [Identifier]
 
-    init(_ id: Identifier, _ args: [Identifier]) {
+    init(id: Identifier, args: [Identifier], line: UInt) {
         self.id = id
         self.args = args
+        super.init(line: line)
     }
 }
 
@@ -29,15 +30,21 @@ class Function : Node {
     }
 
     override func generateLLVMWithGenerator(gen: Generator) {
-        var signatureString = "define \(self.signature.id.type.LLVMString()) \(self.signature.id.LLVMString()) ("
+        var signatureString = "define \(signature.id.type.LLVMString()) \(signature.id.LLVMString()) ("
         for arg in signature.args {
             signatureString.extend("\(arg.type.LLVMString()) %\(arg.op.LLVMString())")
-            if find(signature.args, arg) < signature.args.count {
+            if find(signature.args, arg) < signature.args.count-1 {
                 signatureString.extend(",")
             }
         }
         signatureString.extend(") {")
         gen.appendInstruction(signatureString)
+
+        for arg in signature.args {
+            gen.appendInstruction("\(arg) = alloca \(arg.type.LLVMString())")
+            gen.appendInstruction("store \(arg.type.LLVMString()) %\(arg.op), \(arg.type.LLVMString())* \(arg)")
+            arg.allocated = true
+        }
 
         var before = gen.reserveLabel(), after = gen.reserveLabel()
         if body.needsBeforeLabel() {

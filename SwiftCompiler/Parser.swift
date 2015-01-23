@@ -66,6 +66,7 @@ class Parser {
                 self.match(.Identifier(nil))
 
                 let id = Identifier(op: varIdTok, type: varType, offset: 0, line: lexer.line)
+                id.isArgument = true
                 args.append(id)
                 topScope.setIdentifier(id, forToken: varIdTok)
 
@@ -82,7 +83,7 @@ class Parser {
         //create the identifier for the function and return the prototype
         let funcId = Identifier(op: funcIdTok, type: funcType, offset: 0, line: lexer.line)
         funcId.isGlobal = true
-        return Prototype(funcId, args)
+        return Prototype(id: funcId, args: args, line: lexer.line)
     }
 
     func type() -> TypeBase {
@@ -433,7 +434,8 @@ extension Parser {
         self.match(.Identifier(nil))
         let id = topScope.identifierForToken(idTok)
         var args: [Expression] = []
-        if globalScope.prototypeForToken(idTok).args.count > 0 {
+        let signature = globalScope.prototypeForToken(idTok)
+        if signature.args.count > 0 {
             self.match(.Colon)
             while (true) {
                 let expr = self.orExpression()
@@ -445,7 +447,7 @@ extension Parser {
             }
         }
         self.match(.RBrack)
-        return Call(id: id, args: args, line: lexer.line)
+        return Call(id: id, args: args, signature: signature, line: lexer.line)
     }
 
     func constantExpression() -> Constant {

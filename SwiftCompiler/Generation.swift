@@ -25,19 +25,10 @@ typealias Label = UInt
     }
 
     func appendLabel(label: Label) {
-        if !betweenBlocks {
-            output.extendLn("br label %L\(label)")
-        }
-        output.extendLn("%L\(label):")
+        output.extendLn("L\(label):")
     }
 
     func appendInstruction(code: String) {
-        if code.endsBasicBlock() {
-            betweenBlocks = true
-        }
-        else {
-            betweenBlocks = false
-        }
         output.extendLn(code)
     }
 

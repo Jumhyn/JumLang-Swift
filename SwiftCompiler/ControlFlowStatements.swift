@@ -33,14 +33,16 @@ class If: Statement {
             expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: elseLabel)
             gen.appendLabel(label)
             stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
-            gen.appendInstruction("br label %\(after)")
+            gen.appendInstruction("br label %L\(after)")
             gen.appendLabel(elseLabel)
             elseStmtUnwrapped.generateLLVMWithGenerator(gen, beforeLabel: elseLabel, afterLabel: after)
+            gen.appendInstruction("br label %L\(after)")
         }
         else {
             expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: after)
             gen.appendLabel(label)
             stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
+            gen.appendInstruction("br label %L\(after)")
         }
     }
 
@@ -64,7 +66,7 @@ class While: Statement {
         expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: after)
         gen.appendLabel(label)
         stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
-        gen.appendInstruction("br label %\(before)")
+        gen.appendInstruction("br label %L\(before)")
     }
 
     override func needsBeforeLabel() -> Bool {
