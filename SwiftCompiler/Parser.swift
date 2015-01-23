@@ -98,16 +98,17 @@ class Parser {
 
     func match(token: Token) {
         //match a specific token
-        if (token == lookahead || token == .Any) {
+        switch token {
+        case .Any, lookahead:
             lookahead = lexer.nextToken()
-        }
-        else {
-            error("expected \(token) instead of \(lookahead)", lexer.line)
+        default:
+            error("expected '\(token)' but found '\(lookahead)'", lexer.line)
         }
     }
 
     func match(tokens: Token ...) {
         //match any one of multiple tokens
+        //FIXME: will match any token
         if (contains(tokens, lookahead) || contains(tokens, .Any)) {
             lookahead = lexer.nextToken()
         }
@@ -289,7 +290,7 @@ extension Parser {
         if currentFunc.id.type == TypeBase.voidType() {
             error("returning value from void function", lexer.line)
         }
-        let expr = self.expression()
+        let expr = self.orExpression()
         self.match(.Semi)
         return Return(expr: expr, from: currentFunc, line: lexer.line)
     }

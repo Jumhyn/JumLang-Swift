@@ -59,7 +59,7 @@ class Scope {
         if let proto = globalScope.funcTable[token] {
             return proto
         }
-        error("use of undeclared identifier", 0)
+        error("use of undeclared identifier \(token)", 0)
     }
 
     func setPrototype(proto: Prototype, forToken token: Token) {

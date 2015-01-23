@@ -1,8 +1,12 @@
+[int timesTwo: int x] {
+return 2 * x;
+}
+
 [int main] {
     char x = 3;
     if (x > 2) {
         int x = 4;
         x = x + 1;
     }
-    return x;
+    return [timesTwo: x];
 }

@@ -9,7 +9,7 @@
 import Foundation
 
 @noreturn func error(err: String, line: UInt) {
-    fatalError("\(err) on line \(line)")
+    fatalError("\(err) near line \(line)")
 }
 
 func <(lhs: String.Index, rhs: String.Index) -> Bool {
