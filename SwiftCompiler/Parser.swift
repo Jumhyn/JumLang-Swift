@@ -99,10 +99,10 @@ class Parser {
 
     func match(token: Token) {
         //match a specific token
-        switch token {
-        case .Any, lookahead:
+        if token == lookahead || token == .Any {
             lookahead = lexer.nextToken()
-        default:
+        }
+        else {
             error("expected '\(token)' but found '\(lookahead)'", lexer.line)
         }
     }
@@ -181,11 +181,12 @@ extension Parser {
     }
 
     func arrayDeclaration(of: TypeBase) -> Statement {
-        var type = ArrayType(elements: 0, to: of)
+        var type = ArrayType(numElements: 0, to: of)
         self.match(.LBrack)
         switch lookahead {
         case .Integer(let val):
-            type.elements = UInt(val!)
+            type.numElements = UInt(val!)
+            self.match(.Integer(nil))
             self.match(.RBrack)
             let idTok = lookahead
             self.match(.Identifier(nil))
@@ -195,10 +196,12 @@ extension Parser {
             topScope.setIdentifier(id, forToken: idTok)
             if lookahead == .Assign {
                 self.match(.Assign)
-                let expr = self.constantExpression()
+                let expr = self.arrayLiteral()
+                let numElements = (expr.type as ArrayType).numElements
+                if type.numElements !=  numElements {
+                    error("array literal and declaration must agree in number of elements", lexer.line)
+                }
                 self.match(.Semi)
-                //FIXME: this won't generate correct code
-                //probably need new ArrayAssignment class...
                 return Assignment(id: id, expr: expr, line: lexer.line)
             }
             return self.statement()
@@ -212,10 +215,8 @@ extension Parser {
             topScope.setIdentifier(id, forToken: idTok)
             self.match(.Assign)
             let expr = self.arrayLiteral()
-            type.elements = (expr.type as ArrayType).elements
+            type.numElements = (expr.type as ArrayType).numElements
             self.match(.Semi)
-            //FIXME: this won't generate correct code
-            //probably need new ArrayAssignment class...
             return Assignment(id: id, expr: expr, line: lexer.line)
         default:
             error("expected constant", lexer.line)
@@ -381,7 +382,7 @@ extension Parser {
         var lhs = self.multiplicationExpression()
         while lookahead == .Plus || lookahead == .Minus {
             let op = lookahead
-            self.match(.Less, .LEqual, .Greater, .GEqual)
+            self.match(.Plus, .Minus)
             let rhs = self.multiplicationExpression()
             lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }

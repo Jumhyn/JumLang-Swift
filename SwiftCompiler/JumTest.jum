@@ -3,7 +3,8 @@ return 2 * x;
 }
 
 [int main] {
-    char x = 3;
+    char[4] y = [3, 4, 5];
+    int x = 3;
     if (x > 2) {
         int x = 4;
         x = x + 1;

@@ -41,7 +41,7 @@ func ==(lhs: PointerType, rhs: PointerType) -> Bool {
 }
 
 func ==(lhs: ArrayType, rhs: ArrayType) -> Bool {
-    return lhs.to == rhs.to && lhs.elements == rhs.elements
+    return lhs.to == rhs.to && lhs.numElements == rhs.numElements
 }
 
 func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
@@ -96,6 +96,7 @@ func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
 
 class PointerType : TypeBase {
     var to: TypeBase
+
     init(to: TypeBase) {
         self.to = to
         super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: 32)
@@ -103,9 +104,14 @@ class PointerType : TypeBase {
 }
 
 class ArrayType : PointerType {
-    var elements: UInt
-    init(elements: UInt, to: TypeBase) {
-        self.elements = elements
+    var numElements: UInt
+
+    init(numElements: UInt, to: TypeBase) {
+        self.numElements = numElements
         super.init(to: to)
+    }
+
+    override func LLVMString() -> String {
+        return "[\(numElements) x \(to.LLVMString())]"
     }
 }

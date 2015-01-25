@@ -235,12 +235,30 @@ class ArrayLiteral: Constant {
 
     init(values: [Constant], line: UInt) {
         self.values = values
-        super.init(op: .Unknown, type: ArrayType(elements: UInt(values.count), to: values[0].type), line: line)
+        let elementType = values[0].type
+        super.init(op: .Unknown, type: ArrayType(numElements: UInt(values.count), to: elementType), line: line)
+    }
+
+    override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
+        if !(to is ArrayType) {
+            error("cannot convert array to non-array type", line)
+        }
         for value in values {
-            if value.type != type {
-                error("members of an array literal must all have the same type", 0)
+            value.convertTo((to as ArrayType).to, withGenerator: gen)
+        }
+        return self
+    }
+
+    override func LLVMString() -> String {
+        var ret = "["
+        for i in 0 ..< values.count {
+            ret.extend("\(values[i].type.LLVMString()) \(values[i].LLVMString())")
+            if i < values.count - 1 {
+                ret.extend(", ")
             }
         }
+        ret.extend("]")
+        return ret
     }
 }
 
@@ -265,7 +283,7 @@ class BooleanConstant: Constant, Logical {
                 gen.appendInstruction("br label %L\(falseLabel)")
             }
         default:
-            error("how did this even happen", 0)
+            error("how did this even happen", line)
         }
     }
 }

@@ -10,19 +10,6 @@ import Foundation
 
 func ==(lhs: Token, rhs: Token) -> Bool {
     switch lhs {
-    case .Any:
-        return true
-    default:
-        break
-    }
-    switch rhs {
-    case .Any:
-        return true
-    default:
-        break
-    }
-
-    switch lhs {
     case .Plus:
         switch rhs {
         case .Plus: return true
@@ -139,6 +126,16 @@ func ==(lhs: Token, rhs: Token) -> Bool {
         case .Semi: return true
         default: return false
         }
+    case .Comma:
+        switch rhs {
+        case .Comma: return true
+        default: return false
+        }
+    case .Dot:
+        switch rhs {
+        case .Dot: return true
+        default: return false
+        }
 
     case .If:
         switch rhs {
@@ -236,6 +233,12 @@ func ==(lhs: Token, rhs: Token) -> Bool {
         case .Index: return true
         default: return false
         }
+
+    case .Any:
+        switch rhs {
+        case .Any: return true
+        default: return false
+        }
         
     default:
         return false
@@ -320,7 +323,7 @@ enum Token {
         case ";":
             self = .Semi
         case ",":
-            self = .Colon
+            self = .Comma
         case ".":
             self = .Dot
 
