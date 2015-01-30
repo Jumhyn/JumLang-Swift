@@ -10,7 +10,7 @@ import Foundation
 
 var lex = Lexer(file: "/Users/freddy/Development/Xcode Projects/SwiftCompiler/SwiftCompiler/JumTest.jum")
 
-var parser = Parser(lex)
+var parser = Parser(lexer: lex)
 var funcs = parser.program()
 
 var gen = Generator()

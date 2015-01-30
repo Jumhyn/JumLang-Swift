@@ -58,13 +58,13 @@ class Expression: Node, Printable {
             if opString == "" {
                 error("can't convert \(type) to \(to)", line)
             }
-            gen.appendInstruction("\(temp.LLVMString()) = \(opString) \(type.LLVMString()) \(reduced.LLVMString()) to \(to.LLVMString())")
+            gen.appendInstruction("\(temp) = \(opString) \(type) \(reduced) to \(to)")
             return temp
         }
     }
 
     func LLVMString() -> String {
-        return description
+        return op.LLVMString()
     }
 }
 
@@ -76,12 +76,13 @@ extension Expression: Printable, Streamable {
     }
 }
 
-class Temporary: Expression {
+class Temporary: Identifier {
     var number: UInt
 
     init(number: UInt, type: TypeBase, line: UInt) {
         self.number = number
         super.init(op: .Temp, type: type, line: line)
+        self.allocated = true
     }
 
     override func LLVMString() -> String {
@@ -112,8 +113,7 @@ class Identifier: Expression, Equatable {
         return op.description
     }
 
-    init(op: Token, type: TypeBase, offset: Int, line: UInt) {
-        self.offset = offset
+    override init(op: Token, type: TypeBase, line: UInt) {
         super.init(op: op, type: type, line: line)
     }
 
@@ -128,7 +128,41 @@ class Identifier: Expression, Equatable {
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
         let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp.LLVMString()) = load \(type.LLVMString())* \(self.LLVMString())")
+        gen.appendInstruction("\(temp) = load \(type)* \(self)")
+        return temp
+    }
+
+    func getPointerWithGenerator(gen: Generator) -> Expression {
+        if !allocated {
+            gen.appendInstruction("\(self) = alloca \(self.type)")
+            allocated = true
+        }
+        return self
+    }
+}
+
+class ArrayAccess: Identifier {
+    var indexExpr: Expression
+
+    init(indexExpr: Expression, arrayId: Identifier, line: UInt) {
+        self.indexExpr = indexExpr
+        if !(arrayId.type is ArrayType) {
+            error("attempt to access member of non-array type", line)
+        }
+        super.init(op: arrayId.op, type: (arrayId.type as ArrayType).to, line: line)
+    }
+
+    override func reduceWithGenerator(gen: Generator) -> Expression {
+        let temp = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp) = load \(type)* \(self)")
+        return temp
+    }
+
+    override func getPointerWithGenerator(gen: Generator) -> Expression {
+        super.getPointerWithGenerator(gen)
+        let index = indexExpr.reduceWithGenerator(gen)
+        let temp = gen.getTemporaryOfType((type as ArrayType).to)
+        gen.appendInstruction("\(temp) = getelementptr \(type)* \(self), i32 0, i32 \(index)")
         return temp
     }
 }
@@ -150,7 +184,7 @@ class Arithmetic: Operator {
             prefix = "f"
         }
         let opString = prefix + op.LLVMString()
-        return "\(opString) \(type.LLVMString()) \(expr1.LLVMString()), \(expr2.LLVMString())"
+        return "\(opString) \(type) \(expr1), \(expr2)"
     }
 
     init(op: Token, expr1: Expression, expr2: Expression, line: UInt) {
@@ -164,7 +198,7 @@ class Arithmetic: Operator {
         let reduced2 = expr2.reduceWithGenerator(gen)
         let temp = gen.getTemporaryOfType(type)
         let result = Arithmetic(op: op, expr1: reduced1, expr2: reduced2, line: line)
-        gen.appendInstruction("\(temp.LLVMString()) = \(result.LLVMString())")
+        gen.appendInstruction("\(temp) = \(result)")
         return temp
     }
 }
@@ -246,13 +280,14 @@ class ArrayLiteral: Constant {
         for value in values {
             value.convertTo((to as ArrayType).to, withGenerator: gen)
         }
+        type = to
         return self
     }
 
     override func LLVMString() -> String {
         var ret = "["
         for i in 0 ..< values.count {
-            ret.extend("\(values[i].type.LLVMString()) \(values[i].LLVMString())")
+            ret.extend("\(values[i].type) \(values[i])")
             if i < values.count - 1 {
                 ret.extend(", ")
             }
@@ -394,9 +429,9 @@ class Relation: Expression, Logical {
         }
 
         let temp = gen.getTemporaryOfType(TypeBase.boolType())
-        gen.appendInstruction("\(temp) = \(cmpPrefix)cmp \(testPrefix)\(op.LLVMString()) \(maxType.LLVMString()) \(reduced1.LLVMString()), \(reduced2.LLVMString())")
+        gen.appendInstruction("\(temp) = \(cmpPrefix)cmp \(testPrefix)\(op) \(maxType) \(reduced1), \(reduced2)")
         if trueLabel != 0 && falseLabel != 0 {
-            gen.appendInstruction("br i1 \(temp.LLVMString()), label %L\(trueLabel), label %L\(falseLabel)");
+            gen.appendInstruction("br i1 \(temp), label %L\(trueLabel), label %L\(falseLabel)");
         }
     }
 }
@@ -421,15 +456,15 @@ class Call: Expression {
         }
         self.args = reducedArray
         let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = \(self.LLVMString())")
+        gen.appendInstruction("\(temp) = \(self)")
         return temp
     }
 
     override func LLVMString() -> String {
-        var callString = "call \(type.LLVMString()) \(id.LLVMString()) ("
+        var callString = "call \(type) \(id) ("
         var index = 0
         for arg in args {
-            callString.extend("\(arg.type.LLVMString()) \(arg.LLVMString())")
+            callString.extend("\(arg.type) \(arg)")
             if index < args.count-1 {
                 callString.extend(",")
             }

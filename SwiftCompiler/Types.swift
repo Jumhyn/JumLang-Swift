@@ -77,6 +77,27 @@ func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
         return ret
     }
 
+    func defaultConstant() -> Constant {
+        if numeric {
+            if floatingPoint {
+                return Constant(floatVal: 0, line: 0)
+            }
+            else {
+                return Constant(intVal: 0, line: 0)
+            }
+        }
+        else if apparentSize == 1 {
+            return BooleanConstant(boolVal: false, line: 0)
+        }
+        else {
+            error("cannot initialize \(self) with default value", 0)
+        }
+    }
+
+    func writeTo<Target : OutputStreamType>(inout target: Target) {
+        target.write(self.LLVMString())
+    }
+
     class func voidType() -> TypeBase {
         return TypeBase(numeric: false, signed: false, floatingPoint: false, apparentSize: 0)
     }
@@ -112,6 +133,11 @@ class ArrayType : PointerType {
     }
 
     override func LLVMString() -> String {
-        return "[\(numElements) x \(to.LLVMString())]"
+        return "[\(numElements) x \(to)]"
+    }
+
+    override func defaultConstant() -> Constant {
+        var defaultVal = to.defaultConstant()
+        return ArrayLiteral(values: Array<Constant>(count: Int(numElements), repeatedValue: defaultVal), line: 0)
     }
 }

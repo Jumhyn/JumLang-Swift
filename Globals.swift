@@ -32,6 +32,6 @@ func !^(lhs: Bool, rhs: Bool) -> Bool {
     return !(lhs ^ rhs)
 }
 
-protocol LLVMPrintable {
+protocol LLVMPrintable: Streamable {
     func LLVMString() -> String
 }

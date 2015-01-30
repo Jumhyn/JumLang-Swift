@@ -16,7 +16,7 @@ class Parser {
     var topScope: Scope
     weak var currentFunc: Prototype! = nil
 
-    init(_ lexer: Lexer) {
+    init(lexer: Lexer) {
         self.lexer = lexer
         self.lookahead = lexer.nextToken()
         self.globalScope = Scope()
@@ -65,7 +65,7 @@ class Parser {
                 let varIdTok = lookahead
                 self.match(.Identifier(nil))
 
-                let id = Identifier(op: varIdTok, type: varType, offset: 0, line: lexer.line)
+                let id = Identifier(op: varIdTok, type: varType, line: lexer.line)
                 id.isArgument = true
                 args.append(id)
                 topScope.setIdentifier(id, forToken: varIdTok)
@@ -81,7 +81,7 @@ class Parser {
         self.match(.RBrack)
 
         //create the identifier for the function and return the prototype
-        let funcId = Identifier(op: funcIdTok, type: funcType, offset: 0, line: lexer.line)
+        let funcId = Identifier(op: funcIdTok, type: funcType, line: lexer.line)
         funcId.isGlobal = true
         return Prototype(id: funcId, args: args, line: lexer.line)
     }
@@ -90,8 +90,23 @@ class Parser {
         //match a type token and return the corresponding type
         switch lookahead {
         case .Type(let type):
-            match(.Type(nil))
-            return type!
+            var ret = type!
+            self.match(.Type(nil))
+            while lookahead == .LBrack {
+                self.match(.LBrack)
+                switch lookahead {
+                case .Integer(let val):
+                    self.match(.Integer(nil))
+                    self.match(.RBrack)
+                    ret = ArrayType(numElements: UInt(val!), to: ret)
+                case .RBrack:
+                    self.match(.RBrack)
+                    ret = ArrayType(numElements: 0, to: ret)
+                default:
+                    error("expected array type declaration", lexer.line)
+                }
+            }
+            return ret
         default:
             error("expected type", lexer.line)
         }
@@ -109,7 +124,6 @@ class Parser {
 
     func match(tokens: Token ...) {
         //match any one of multiple tokens
-        //FIXME: will match any token
         if (contains(tokens, lookahead) || contains(tokens, .Any)) {
             lookahead = lexer.nextToken()
         }
@@ -148,21 +162,19 @@ extension Parser {
     func declaration() -> Statement {
         //a type indicates either a array or variable declaration
         let type = self.type()
-        switch lookahead {
-        case .Identifier(_):
+        if type is ArrayType {
+            return self.arrayDeclaration(type as ArrayType)
+        }
+        else {
             return self.variableDeclaration(type)
-        case .LBrack:
-            return self.arrayDeclaration(type)
-        default:
-            error("expexted declaration", lexer.line)
         }
     }
 
     func variableDeclaration(type: TypeBase) -> Statement {
         let idTok = lookahead
         self.match(.Identifier(nil))
-        let id = Identifier(op: idTok, type: type, offset: 0, line: lexer.line)
-        id.enclosingFuncName = currentFunc.id.op.description
+        let id = Identifier(op: idTok, type: type, line: lexer.line)
+        id.enclosingFuncName = currentFunc.id.op.LLVMString()
         id.scopeNumber = globalScope.scopeCount
         topScope.setIdentifier(id, forToken: idTok)
 
@@ -180,46 +192,33 @@ extension Parser {
         }
     }
 
-    func arrayDeclaration(of: TypeBase) -> Statement {
-        var type = ArrayType(numElements: 0, to: of)
-        self.match(.LBrack)
-        switch lookahead {
-        case .Integer(let val):
-            type.numElements = UInt(val!)
-            self.match(.Integer(nil))
-            self.match(.RBrack)
-            let idTok = lookahead
-            self.match(.Identifier(nil))
-            let id = Identifier(op: idTok, type: type, offset: 0, line: lexer.line)
-            id.enclosingFuncName = currentFunc.id.op.description
-            id.scopeNumber = globalScope.scopeCount
-            topScope.setIdentifier(id, forToken: idTok)
-            if lookahead == .Assign {
-                self.match(.Assign)
-                let expr = self.arrayLiteral()
-                let numElements = (expr.type as ArrayType).numElements
-                if type.numElements !=  numElements {
-                    error("array literal and declaration must agree in number of elements", lexer.line)
-                }
-                self.match(.Semi)
-                return Assignment(id: id, expr: expr, line: lexer.line)
+    func arrayDeclaration(type: ArrayType) -> Statement {
+        let idTok = lookahead
+        self.match(.Identifier(nil))
+        let id = Identifier(op: idTok, type: type, line: lexer.line)
+        id.enclosingFuncName = currentFunc.id.op.LLVMString()
+        id.scopeNumber = globalScope.scopeCount
+        topScope.setIdentifier(id, forToken: idTok)
+        if lookahead == .Assign {
+            self.match(.Assign)
+            let expr = self.arrayLiteral()
+            let numElements = (expr.type as ArrayType).numElements
+            if type.numElements !=  numElements {
+                error("array literal and declaration must agree in number of elements", lexer.line)
             }
-            return self.statement()
-        case .RBrack:
-            self.match(.RBrack)
-            let idTok = lookahead
-            self.match(.Identifier(nil))
-            let id = Identifier(op: idTok, type: type, offset: 0, line: lexer.line)
-            id.enclosingFuncName = currentFunc.id.op.description
-            id.scopeNumber = globalScope.scopeCount
-            topScope.setIdentifier(id, forToken: idTok)
+            self.match(.Semi)
+            return Assignment(id: id, expr: expr, line: lexer.line)
+        }
+        else if type.numElements == 0 {
             self.match(.Assign)
             let expr = self.arrayLiteral()
             type.numElements = (expr.type as ArrayType).numElements
             self.match(.Semi)
             return Assignment(id: id, expr: expr, line: lexer.line)
-        default:
-            error("expected constant", lexer.line)
+        }
+        else {
+            self.match(.Semi)
+            return Assignment(id: id, expr: type.defaultConstant(), line: lexer.line)
         }
     }
 

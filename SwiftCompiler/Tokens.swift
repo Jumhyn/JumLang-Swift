@@ -409,17 +409,17 @@ extension Token : Printable, Streamable {
             return "t"
 
         case .Identifier(let id):
-            return "\(id!)"
+            return "identifier"
         case .Boolean(let bool):
-            return "\(bool)"
+            return "boolean constant"
         case .Integer(let int):
-            return "\(int!)"
+            return "integer constant"
         case .Decimal(let dec):
-            return "\(dec!)"
+            return "floating point constant"
         case .StringLiteral(let str):
-            return "\"\(str!)\""
+            return "string literal"
         case .Type(let type):
-            return "\(type!)"
+            return "type"
             
         case .Array, .Index:
             return "array/index operator"
@@ -430,13 +430,13 @@ extension Token : Printable, Streamable {
     }
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
-        target.write(self.description);
+        target.write(self.LLVMString())
     }
 }
 
 extension Token : Hashable {
     var hashValue: Int {
-        return self.description.hashValue
+        return self.LLVMString().hashValue
     }
 }
 
@@ -464,6 +464,19 @@ extension Token : LLVMPrintable {
             return "ge"
         case .Greater:
             return "gt"
+
+        case .Identifier(let id):
+            return "\(id!)"
+        case .Boolean(let bool):
+            return "\(bool!)"
+        case .Integer(let int):
+            return "\(int!)"
+        case .Decimal(let dec):
+            return "\(dec!)"
+        case .StringLiteral(let str):
+            return "\"\(str!)\""
+        case .Type(let type):
+            return "\(type!)"
 
         default:
             return self.description

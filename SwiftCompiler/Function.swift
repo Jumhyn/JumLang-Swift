@@ -30,9 +30,9 @@ class Function : Node {
     }
 
     override func generateLLVMWithGenerator(gen: Generator) {
-        var signatureString = "define \(signature.id.type.LLVMString()) \(signature.id.LLVMString()) ("
+        var signatureString = "define \(signature.id.type) \(signature.id) ("
         for arg in signature.args {
-            signatureString.extend("\(arg.type.LLVMString()) %\(arg.op.LLVMString())")
+            signatureString.extend("\(arg.type) %\(arg.op)")
             if find(signature.args, arg) < signature.args.count-1 {
                 signatureString.extend(",")
             }
@@ -41,8 +41,8 @@ class Function : Node {
         gen.appendInstruction(signatureString)
 
         for arg in signature.args {
-            gen.appendInstruction("\(arg) = alloca \(arg.type.LLVMString())")
-            gen.appendInstruction("store \(arg.type.LLVMString()) %\(arg.op), \(arg.type.LLVMString())* \(arg)")
+            gen.appendInstruction("\(arg) = alloca \(arg.type)")
+            gen.appendInstruction("store \(arg.type) %\(arg.op), \(arg.type)* \(arg)")
             arg.allocated = true
         }
 

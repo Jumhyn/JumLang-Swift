@@ -80,12 +80,8 @@ class Assignment: Statement {
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        if !id.allocated {
-            gen.appendInstruction("\(id.LLVMString()) = alloca \(id.type.LLVMString())")
-            id.allocated = true
-        }
         let reduced = expr.convertTo(id.type, withGenerator: gen)
-        gen.appendInstruction("store \(reduced.type.LLVMString()) \(reduced.LLVMString()), \(id.type.LLVMString())* \(id.LLVMString())")
+        gen.appendInstruction("store \(reduced.type) \(reduced), \(id.type)* \(id.getPointerWithGenerator(gen))")
     }
 }
 
@@ -107,7 +103,7 @@ class Return: Statement {
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         if let exprUnwrapped = expr {
             let reduced = exprUnwrapped.convertTo(from.id.type, withGenerator: gen)
-            gen.appendInstruction("ret \(reduced.type.LLVMString()) \(reduced.LLVMString())")
+            gen.appendInstruction("ret \(reduced.type) \(reduced)")
         }
         else {
             gen.appendInstruction("ret void")
