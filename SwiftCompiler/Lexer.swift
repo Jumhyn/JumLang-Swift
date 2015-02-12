@@ -145,6 +145,7 @@ class Lexer {
             var powerOfTen: Double = 1.0
             while currentChar.isDigit() {
                 doubleVal += Double(currentChar.toInt()!) / (10.0 ^ powerOfTen)
+                advance()
             }
             return .Decimal(doubleVal)
         }
