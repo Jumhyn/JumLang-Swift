@@ -10,7 +10,7 @@ import Foundation
 
 typealias Label = UInt
 
-@objc class Generator {
+class Generator {
     var currentLabel: Label = 1
     var tempCount: UInt = 1
     var output = ""

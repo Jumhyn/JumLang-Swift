@@ -56,15 +56,15 @@ extension Character {
 
     func isSpace() -> Bool {
         var set = NSCharacterSet.whitespaceAndNewlineCharacterSet()
-        return set.characterIsMember(String(self).utf16[0])
+        return set.characterIsMember(String(self).utf16[String.UTF16Index(0)])
     }
     func isDigit() -> Bool {
         var set = NSCharacterSet.decimalDigitCharacterSet()
-        return set.characterIsMember(String(self).utf16[0])
+        return set.characterIsMember(String(self).utf16[String.UTF16Index(0)])
     }
     func isAlpha() -> Bool {
         var set = NSCharacterSet.letterCharacterSet()
-        return set.characterIsMember(String(self).utf16[0])
+        return set.characterIsMember(String(self).utf16[String.UTF16Index(0)])
     }
 
     func toInt() -> Int? {

@@ -163,7 +163,7 @@ extension Parser {
         //a type indicates either a array or variable declaration
         let type = self.type()
         if type is ArrayType {
-            return self.arrayDeclaration(type as ArrayType)
+            return self.arrayDeclaration(type as! ArrayType)
         }
         else {
             return self.variableDeclaration(type)
@@ -202,7 +202,7 @@ extension Parser {
         if lookahead == .Assign {
             self.match(.Assign)
             let expr = self.arrayLiteral()
-            let numElements = (expr.type as ArrayType).numElements
+            let numElements = (expr.type as! ArrayType).numElements
             if type.numElements !=  numElements {
                 error("array literal and declaration must agree in number of elements", lexer.line)
             }
@@ -212,7 +212,7 @@ extension Parser {
         else if type.numElements == 0 {
             self.match(.Assign)
             let expr = self.arrayLiteral()
-            type.numElements = (expr.type as ArrayType).numElements
+            type.numElements = (expr.type as! ArrayType).numElements
             self.match(.Semi)
             return Assignment(id: id, expr: expr, line: lexer.line)
         }
@@ -256,9 +256,9 @@ extension Parser {
         let stmt = self.statement()
         if self.lookahead == .Else {
             self.match(.Else)
-            return If(expr: expr as Logical, stmt: stmt, elseStmt: self.statement(), line: lexer.line)
+            return If(expr: expr as! Logical, stmt: stmt, elseStmt: self.statement(), line: lexer.line)
         }
-        return If(expr: expr as Logical, stmt: stmt, line: lexer.line)
+        return If(expr: expr as! Logical, stmt: stmt, line: lexer.line)
     }
 
     func whileStatement() -> While {
@@ -267,7 +267,7 @@ extension Parser {
         if !(expr is Logical) {
             error("expected expression with boolean result", lexer.line)
         }
-        return While(expr: expr as Logical, stmt: self.statement(), line: lexer.line)
+        return While(expr: expr as! Logical, stmt: self.statement(), line: lexer.line)
     }
 
     func doWhileStatement() -> DoWhile {
@@ -279,7 +279,7 @@ extension Parser {
             error("expected expression with boolean result", lexer.line)
         }
         self.match(.Semi)
-        return DoWhile(stmt: stmt, expr: expr as Logical, line: lexer.line)
+        return DoWhile(stmt: stmt, expr: expr as! Logical, line: lexer.line)
     }
 
     func returnStatement() -> Return {
@@ -337,7 +337,7 @@ extension Parser {
             if !(lhs is Logical && rhs is Logical) {
                 error("expected expression with boolean result", lexer.line)
             }
-            lhs = Or(expr1: lhs as Logical, expr2: rhs as Logical, line: lexer.line)
+            lhs = Or(expr1: lhs as! Logical, expr2: rhs as! Logical, line: lexer.line)
         }
         return lhs
     }
@@ -350,7 +350,7 @@ extension Parser {
             if !(lhs is Logical && rhs is Logical) {
                 error("expected expression with boolean result", lexer.line)
             }
-            lhs = And(expr1: lhs as Logical, expr2: rhs as Logical, line: lexer.line)
+            lhs = And(expr1: lhs as! Logical, expr2: rhs as! Logical, line: lexer.line)
         }
         return lhs
     }
@@ -410,7 +410,7 @@ extension Parser {
             default:
                 let expr = self.unaryExpression()
                 if expr is Unary && expr.op == .Minus {
-                    return (expr as Unary).expr
+                    return (expr as! Unary).expr
                 }
                 return Unary(op: .Minus, expr: expr, line: lexer.line)
             }
@@ -421,7 +421,7 @@ extension Parser {
             if !(expr is Logical) {
                 error("expected expression with boolean result", lexer.line)
             }
-            return Not(op: .Not, expr: expr as Logical, line: lexer.line)
+            return Not(op: .Not, expr: expr as! Logical, line: lexer.line)
         }
         else {
             return self.expression()

@@ -5,6 +5,7 @@ return 2 * x;
 [int main] {
     int[2][2] y;
     int x = 3;
+    float z = 2.0;
     if (x > 2) {
         int x = 4;
         x = x + 1;

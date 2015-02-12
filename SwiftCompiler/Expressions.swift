@@ -149,7 +149,7 @@ class ArrayAccess: Identifier {
         if !(arrayId.type is ArrayType) {
             error("attempt to access member of non-array type", line)
         }
-        super.init(op: arrayId.op, type: (arrayId.type as ArrayType).to, line: line)
+        super.init(op: arrayId.op, type: (arrayId.type as! ArrayType).to, line: line)
     }
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
@@ -161,7 +161,7 @@ class ArrayAccess: Identifier {
     override func getPointerWithGenerator(gen: Generator) -> Expression {
         super.getPointerWithGenerator(gen)
         let index = indexExpr.reduceWithGenerator(gen)
-        let temp = gen.getTemporaryOfType((type as ArrayType).to)
+        let temp = gen.getTemporaryOfType((type as! ArrayType).to)
         gen.appendInstruction("\(temp) = getelementptr \(type)* \(self), i32 0, i32 \(index)")
         return temp
     }
@@ -215,7 +215,8 @@ class Unary: Operator {
 class Constant: Expression {
     init(intVal val: Int, line: UInt) {
         super.init(op: .Integer(val), type: TypeBase.intType(), line: line)
-        if val >= Int(CHAR_MIN) && val <= Int(CHAR_MAX) {
+        //FIXME: CHAR_MIN??
+        if /*val >= Int(CHAR_MIN) && */val <= Int(CHAR_MAX) {
             type = TypeBase.charType()
         }
     }
@@ -278,7 +279,7 @@ class ArrayLiteral: Constant {
             error("cannot convert array to non-array type", line)
         }
         for value in values {
-            value.convertTo((to as ArrayType).to, withGenerator: gen)
+            value.convertTo((to as! ArrayType).to, withGenerator: gen)
         }
         type = to
         return self
@@ -297,7 +298,7 @@ class ArrayLiteral: Constant {
     }
 }
 
-@objc protocol Logical {
+protocol Logical {
     var type: TypeBase { get }
 
     func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label)
@@ -308,7 +309,7 @@ class BooleanConstant: Constant, Logical {
         super.init(op: .Boolean(val), type: TypeBase.boolType(), line: line)
     }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+   func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
         switch op {
         case .Boolean(let val):
             if val! {
