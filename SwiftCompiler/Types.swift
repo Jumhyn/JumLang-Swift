@@ -20,19 +20,11 @@ func !=(lhs: TypeBase, rhs: TypeBase) -> Bool {
 }
 
 func ==(lhs: TypeBase?, rhs: TypeBase?) -> Bool {
-    if let lhsUnwrapped = lhs {
-        if let rhsUnwrapped = rhs {
-            return lhsUnwrapped == rhsUnwrapped
-        }
-        else {
-            return false
-        }
+    if let lhsUnwrapped = lhs, rhsUnwrapped = rhs {
+        return lhsUnwrapped == rhsUnwrapped
     }
     else {
-        if let rhsUnwrapped = rhs {
-            return false
-        }
-        return true
+        return lhs == nil && rhs == nil
     }
 }
 
