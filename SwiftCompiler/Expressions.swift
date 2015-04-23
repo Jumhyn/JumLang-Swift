@@ -143,9 +143,11 @@ class Identifier: Expression, Equatable {
 
 class ArrayAccess: Identifier {
     var indexExpr: Expression
+    var arrayId: Identifier
 
     init(indexExpr: Expression, arrayId: Identifier, line: UInt) {
         self.indexExpr = indexExpr
+        self.arrayId = arrayId
         if !(arrayId.type is ArrayType) {
             error("attempt to access member of non-array type", line)
         }
@@ -153,16 +155,20 @@ class ArrayAccess: Identifier {
     }
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
+        let ptr = arrayId.getPointerWithGenerator(gen)
+        let index = indexExpr.reduceWithGenerator(gen)
         let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = load \(type)* \(self)")
-        return temp
+        gen.appendInstruction("\(temp) = getelementptr \(ptr.type)* \(ptr), i32 0, i32 \(index)")
+        let temp2 = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp2) = load \(type)* \(temp)")
+        return temp2
     }
 
     override func getPointerWithGenerator(gen: Generator) -> Expression {
-        super.getPointerWithGenerator(gen)
+        let ptr = arrayId.getPointerWithGenerator(gen)
         let index = indexExpr.reduceWithGenerator(gen)
-        let temp = gen.getTemporaryOfType((type as! ArrayType).to)
-        gen.appendInstruction("\(temp) = getelementptr \(type)* \(self), i32 0, i32 \(index)")
+        let temp = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp) = getelementptr \(ptr.type)* \(ptr), i32 0, i32 \(index)")
         return temp
     }
 }

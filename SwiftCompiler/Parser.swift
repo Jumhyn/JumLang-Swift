@@ -92,18 +92,28 @@ class Parser {
         case .Type(let type):
             var ret = type!
             self.match(.Type(nil))
-            while lookahead == .LBrack {
+            if lookahead == .LBrack {
                 self.match(.LBrack)
-                switch lookahead {
-                case .Integer(let val):
-                    self.match(.Integer(nil))
-                    self.match(.RBrack)
-                    ret = ArrayType(numElements: UInt(val!), to: ret)
-                case .RBrack:
-                    self.match(.RBrack)
-                    ret = ArrayType(numElements: 0, to: ret)
-                default:
-                    error("expected array type declaration", lexer.line)
+                arraySizeLoop: while lookahead != .RBrack {
+                    switch lookahead {
+                    case .Integer(let val):
+                        self.match(.Integer(nil))
+                        ret = ArrayType(numElements: UInt(val!), to: ret)
+                        if lookahead == .RBrack {
+                            self.match(.RBrack)
+                            break arraySizeLoop
+                        }
+                        self.match(.Comma)
+                    case .Comma:
+                        self.match(.Comma)
+                        ret = ArrayType(numElements: 0, to: ret)
+                    case .RBrack:
+                        self.match(.RBrack)
+                        ret = ArrayType(numElements: 0, to: ret)
+                        break arraySizeLoop
+                    default:
+                        error("expected array type declaration", lexer.line)
+                    }
                 }
             }
             return ret
@@ -297,8 +307,7 @@ extension Parser {
     }
 
     func assignment() -> Assignment {
-        let id = topScope.identifierForToken(lookahead)
-        self.match(.Identifier(nil))
+        let id = self.identifier()
         self.match(.Assign)
         let stmt = Assignment(id: id, expr: self.orExpression(), line: lexer.line)
         self.match(.Semi)
@@ -321,9 +330,7 @@ extension Parser {
         case .LBrack:
             return self.callExpression()
         case .Identifier(_):
-            let id = topScope.identifierForToken(lookahead)
-            self.match(.Identifier(nil))
-            return id
+            return self.identifier()
         default:
             error("expected expression", lexer.line)
         }
@@ -431,8 +438,7 @@ extension Parser {
     func callExpression() -> Expression {
         self.match(.LBrack)
         let idTok = lookahead
-        self.match(.Identifier(nil))
-        let id = topScope.identifierForToken(idTok)
+        let id = self.identifier()
         var args: [Expression] = []
         let signature = globalScope.prototypeForToken(idTok)
         if signature.args.count > 0 {
@@ -448,6 +454,31 @@ extension Parser {
         }
         self.match(.RBrack)
         return Call(id: id, args: args, signature: signature, line: lexer.line)
+    }
+
+    func identifier() -> Identifier {
+        var id = topScope.identifierForToken(lookahead)
+        self.match(.Identifier(nil))
+        var exprStack: [Expression] = []
+        if lookahead == .LBrack {
+            self.match(.LBrack)
+            while lookahead != .RBrack {
+                let expr = self.orExpression()
+                if !expr.type.numeric || expr.type.floatingPoint {
+                    error("expected numeric expression for array index", lexer.line)
+                }
+                exprStack.append(expr)
+                if lookahead == .RBrack {
+                    self.match(.RBrack)
+                    break
+                }
+                self.match(.Comma)
+            }
+            while exprStack.count > 0 {
+                id = ArrayAccess(indexExpr: exprStack.removeLast(), arrayId: id, line: lexer.line)
+            }
+        }
+        return id
     }
 
     func constantExpression() -> Constant {

@@ -3,12 +3,16 @@ return 2 * x;
 }
 
 [int main] {
-    int[2][2] y;
+    int[2,3] y;
     int x = 3;
-    float z = 2.0;
+    y[0,0] = 4;
     if (x > 2) {
         int x = 4;
         x = x + 1;
     }
+    int[2,3] z;
+    z = y;
+    y[0,0] = 3;
+    x = z[1,2];
     return [timesTwo: x];
 }
