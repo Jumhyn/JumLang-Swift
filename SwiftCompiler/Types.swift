@@ -9,37 +9,7 @@
 import Foundation
 
 func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
-    return lhs.apparentSize == rhs.apparentSize
-        && lhs.numeric == rhs.numeric
-        && lhs.signed == rhs.signed
-        && lhs.floatingPoint == rhs.floatingPoint
-}
-
-func !=(lhs: TypeBase, rhs: TypeBase) -> Bool {
-    return !(lhs == rhs)
-}
-
-func ==(lhs: TypeBase?, rhs: TypeBase?) -> Bool {
-    if let lhs = lhs {
-        if let rhs = rhs {
-            return lhs == rhs
-        }
-        return false
-    }
-    else {
-        if let rhs = rhs {
-            return false
-        }
-        return true
-    }
-}
-
-func ==(lhs: PointerType, rhs: PointerType) -> Bool {
-    return lhs.to == rhs.to
-}
-
-func ==(lhs: ArrayType, rhs: ArrayType) -> Bool {
-    return lhs.to == rhs.to && lhs.numElements == rhs.numElements
+    return lhs.equals(rhs)
 }
 
 func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
@@ -54,7 +24,7 @@ func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
     }
 }
 
-class TypeBase : LLVMPrintable {
+class TypeBase : LLVMPrintable, Equatable {
     var numeric = false
     var signed = true
     var floatingPoint = false
@@ -66,7 +36,7 @@ class TypeBase : LLVMPrintable {
         self.signed = signed
         self.floatingPoint = floatingPoint
         self.apparentSize = apparentSize
-        self.actualSize = (apparentSize / 8 + 1) * 8
+        self.actualSize = (apparentSize / 8 + 1) * 8 //TODO: fix actualSize calculation
     }
 
     func LLVMString() -> String {
@@ -96,6 +66,20 @@ class TypeBase : LLVMPrintable {
         target.write(self.LLVMString())
     }
 
+    func equals(other: TypeBase) -> Bool {
+        return self.apparentSize == other.apparentSize
+            && self.numeric == other.numeric
+            && self.signed == other.signed
+            && self.floatingPoint == other.floatingPoint
+    }
+
+    func canConvertTo(other: TypeBase) -> Bool {
+        if self == other {
+            return true
+        }
+        return self.numeric == other.numeric
+    }
+
     class func voidType() -> TypeBase {
         return TypeBase(numeric: false, signed: false, floatingPoint: false, apparentSize: 0)
     }
@@ -120,6 +104,15 @@ class PointerType : TypeBase {
         self.to = to
         super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: 32)
     }
+
+    override func equals(other: TypeBase) -> Bool {
+        if let other = other as? PointerType {
+            return self.to == other.to && super.equals(other)
+        }
+        else {
+            return false
+        }
+    }
 }
 
 class ArrayType : PointerType {
@@ -137,5 +130,14 @@ class ArrayType : PointerType {
     override func defaultConstant() -> Constant {
         var defaultVal = to.defaultConstant()
         return ArrayLiteral(values: Array<Constant>(count: Int(numElements), repeatedValue: defaultVal), line: 0)
+    }
+
+    override func equals(other: TypeBase) -> Bool {
+        if let other = other as? ArrayType {
+            return self.numElements == other.numElements && super.equals(other)
+        }
+        else {
+            return false
+        }
     }
 }

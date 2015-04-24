@@ -466,17 +466,17 @@ extension Token : LLVMPrintable {
             return "gt"
 
         case .Identifier(let id):
-            return "\(id!)"
+            return id ?? "identifier"
         case .Boolean(let bool):
-            return "\(bool!)"
+            return bool?.description ?? "boolean"
         case .Integer(let int):
-            return "\(int!)"
+            return int?.description ?? "integer literal"
         case .Decimal(let dec):
-            return "\(dec!)"
+            return dec?.description ?? "floating point literal"
         case .StringLiteral(let str):
-            return "\"\(str!)\""
+            return "string literal"
         case .Type(let type):
-            return "\(type!)"
+            return type?.LLVMString() ?? "type expression"
 
         default:
             return self.description

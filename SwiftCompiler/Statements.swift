@@ -44,13 +44,13 @@ class Sequence: Statement {
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        if let stmt2Unwrapped = stmt2 {
+        if let stmt2 = stmt2 {
             let between = gen.reserveLabel()
             stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: between)
-            if stmt1.needsAfterLabel() || stmt2Unwrapped.needsBeforeLabel() {
+            if stmt1.needsAfterLabel() || stmt2.needsBeforeLabel() {
                 gen.appendLabel(between)
             }
-            stmt2Unwrapped.generateLLVMWithGenerator(gen, beforeLabel: between, afterLabel: after)
+            stmt2.generateLLVMWithGenerator(gen, beforeLabel: between, afterLabel: after)
         }
         else {
             stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
@@ -62,8 +62,8 @@ class Sequence: Statement {
     }
 
     override func needsAfterLabel() -> Bool {
-        if let stmt2Unwrapped = stmt2 {
-            return stmt2Unwrapped.needsAfterLabel()
+        if let stmt2 = stmt2 {
+            return stmt2.needsAfterLabel()
         }
         return stmt1.needsAfterLabel()
     }
@@ -101,8 +101,8 @@ class Return: Statement {
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        if let exprUnwrapped = expr {
-            let reduced = exprUnwrapped.convertTo(from.id.type, withGenerator: gen)
+        if let expr = expr {
+            let reduced = expr.convertTo(from.id.type, withGenerator: gen)
             gen.appendInstruction("ret \(reduced.type) \(reduced)")
         }
         else {

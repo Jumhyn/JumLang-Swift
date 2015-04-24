@@ -94,7 +94,7 @@ class Parser {
             self.match(.Type(nil))
             if lookahead == .LBrack {
                 self.match(.LBrack)
-                arraySizeLoop: while lookahead != .RBrack {
+                arraySizeLoop: while true {
                     switch lookahead {
                     case .Integer(let val):
                         self.match(.Integer(nil))
@@ -213,22 +213,36 @@ extension Parser {
             self.match(.Assign)
             let expr = self.arrayLiteral()
             let numElements = (expr.type as! ArrayType).numElements
-            if type.numElements !=  numElements {
+            if !validateArrayType(type, againstQualified: expr.type as! ArrayType) {
                 error("array literal and declaration must agree in number of elements", lexer.line)
             }
-            self.match(.Semi)
-            return Assignment(id: id, expr: expr, line: lexer.line)
+            else {
+                self.match(.Semi)
+                return Assignment(id: id, expr: expr, line: lexer.line)
+            }
         }
-        else if type.numElements == 0 {
-            self.match(.Assign)
-            let expr = self.arrayLiteral()
-            type.numElements = (expr.type as! ArrayType).numElements
-            self.match(.Semi)
-            return Assignment(id: id, expr: expr, line: lexer.line)
-        }
+        //TODO: check that array type is fully qualified (if there is no literal)
         else {
             self.match(.Semi)
             return Assignment(id: id, expr: type.defaultConstant(), line: lexer.line)
+        }
+    }
+
+    func validateArrayType(declared: ArrayType, againstQualified actual: ArrayType) -> Bool {
+        if declared.numElements == 0 {
+            declared.numElements = actual.numElements
+        }
+        if declared.numElements != actual.numElements {
+            return false
+        }
+        else {
+            if let declared = declared.to as? ArrayType, actual = actual.to as? ArrayType {
+                return validateArrayType(declared, againstQualified: actual)
+            }
+            if actual.to.canConvertTo(declared.to) { //TODO: fix bug for converting sizes e.g. int to char
+                return true
+            }
+            return false
         }
     }
 
@@ -500,17 +514,30 @@ extension Parser {
     }
 
     func arrayLiteral() -> ArrayLiteral {
-        self.match(.LBrack)
-        var values: [Constant] = []
-        while true {
-            let const = self.constantExpression()
-            values.append(const)
-            if lookahead != .Comma {
-                break
+        switch lookahead {
+        case .LBrack:
+            self.match(.LBrack)
+            var values: [Constant] = []
+            while true {
+                let const = self.constantExpression()
+                values.append(const)
+                if lookahead != .Comma {
+                    break
+                }
+                self.match(.Comma)
             }
-            self.match(.Comma)
+            self.match(.RBrack)
+            return ArrayLiteral(values: values, line: lexer.line)
+        case .StringLiteral(let str):
+            let charArray = str?.nulTerminatedUTF8 ?? []
+            var values: [Constant] = []
+            for c in charArray {
+                values.append(Constant(intVal: Int(c), line: lexer.line))
+            }
+            self.match(.StringLiteral(nil))
+            return ArrayLiteral(values: values, line: lexer.line)
+        default:
+            error("expected array or string literal", lexer.line)
         }
-        self.match(.RBrack)
-        return ArrayLiteral(values: values, line: lexer.line)
     }
 }

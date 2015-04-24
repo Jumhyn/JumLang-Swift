@@ -28,14 +28,14 @@ class If: Statement {
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         let label = gen.reserveLabel()
-        if let elseStmtUnwrapped = elseStmt {
+        if let elseStmt = elseStmt {
             let elseLabel = gen.reserveLabel()
             expr.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: elseLabel)
             gen.appendLabel(label)
             stmt.generateLLVMWithGenerator(gen, beforeLabel: label, afterLabel: after)
             gen.appendInstruction("br label %L\(after)")
             gen.appendLabel(elseLabel)
-            elseStmtUnwrapped.generateLLVMWithGenerator(gen, beforeLabel: elseLabel, afterLabel: after)
+            elseStmt.generateLLVMWithGenerator(gen, beforeLabel: elseLabel, afterLabel: after)
             gen.appendInstruction("br label %L\(after)")
         }
         else {

@@ -281,14 +281,16 @@ class ArrayLiteral: Constant {
     }
 
     override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
-        if !(to is ArrayType) {
+        if let to = to as? ArrayType {
+            for value in values {
+                value.convertTo(to.to, withGenerator: gen)
+            }
+            type = to
+            return self
+        }
+        else {
             error("cannot convert array to non-array type", line)
         }
-        for value in values {
-            value.convertTo((to as! ArrayType).to, withGenerator: gen)
-        }
-        type = to
-        return self
     }
 
     override func LLVMString() -> String {
