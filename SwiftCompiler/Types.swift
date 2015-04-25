@@ -36,7 +36,7 @@ class TypeBase : LLVMPrintable, Equatable {
         self.signed = signed
         self.floatingPoint = floatingPoint
         self.apparentSize = apparentSize
-        self.actualSize = (apparentSize / 8 + 1) * 8 //TODO: fix actualSize calculation
+        self.actualSize = ((apparentSize - 1) / 8 + 1) * 8 //TODO: fix actualSize calculation
     }
 
     func LLVMString() -> String {
@@ -77,7 +77,7 @@ class TypeBase : LLVMPrintable, Equatable {
         if self == other {
             return true
         }
-        return self.numeric == other.numeric
+        return false
     }
 
     class func voidType() -> TypeBase {
@@ -94,6 +94,49 @@ class TypeBase : LLVMPrintable, Equatable {
     }
     class func floatType() -> TypeBase {
         return TypeBase(numeric: true, signed: true, floatingPoint: true, apparentSize: 64)
+    }
+}
+
+class NumericType : TypeBase {
+    init(signed: Bool, floatingPoint: Bool, apparentSize: UInt) {
+        super.init(numeric: true, signed: signed, floatingPoint: floatingPoint, apparentSize: apparentSize)
+    }
+
+    override func canConvertTo(other: TypeBase) -> Bool {
+        return other is NumericType || self == other
+    }
+}
+
+class BoolType : TypeBase {
+    init() {
+        super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: 1)
+    }
+
+    override func LLVMString() -> String {
+        return "i1"
+    }
+}
+
+class FloatType : NumericType {
+    var doubleWidth: Bool = false
+
+    init(doubleWidth: Bool) {
+        self.doubleWidth = doubleWidth
+        super.init()
+    }
+
+    override func LLVMString() -> String {
+        return doubleWidth ? "double" : "float"
+    }
+}
+
+class IntegerType : NumericType {
+    override init() {
+        super.init()
+    }
+
+    override func LLVMString() -> String {
+        return "i" + String(apparentSize)
     }
 }
 
