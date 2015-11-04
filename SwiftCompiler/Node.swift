@@ -19,3 +19,7 @@ class Node {
 
     }
 }
+
+protocol LLVMPrintable: Streamable {
+    func LLVMString() -> String
+}

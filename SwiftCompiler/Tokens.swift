@@ -337,7 +337,7 @@ enum Token {
     }
 }
 
-extension Token : Printable, Streamable {
+extension Token : CustomStringConvertible, Streamable {
     var description: String {
         switch self {
         case .Any:
@@ -408,17 +408,17 @@ extension Token : Printable, Streamable {
         case .Temp:
             return "t"
 
-        case .Identifier(let id):
+        case .Identifier(_):
             return "identifier"
-        case .Boolean(let bool):
+        case .Boolean(_):
             return "boolean constant"
-        case .Integer(let int):
+        case .Integer(_):
             return "integer constant"
-        case .Decimal(let dec):
+        case .Decimal(_):
             return "floating point constant"
-        case .StringLiteral(let str):
+        case .StringLiteral(_):
             return "string literal"
-        case .Type(let type):
+        case .Type(_):
             return "type"
             
         case .Array, .Index:
@@ -474,7 +474,7 @@ extension Token : LLVMPrintable {
         case .Decimal(let dec):
             return dec?.description ?? "floating point literal"
         case .StringLiteral(let str):
-            return "string literal"
+            return str ?? "string literal"
         case .Type(let type):
             return type?.LLVMString() ?? "type expression"
 

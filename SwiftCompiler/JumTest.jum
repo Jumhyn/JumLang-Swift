@@ -1,19 +1,11 @@
 [int timesTwo: int x] {
-return 2 * x;
+    return 2 * x;
 }
 
 [int main] {
-    int[2, 3] y = [[1, 1],[2,2],[3,3]];
-    char[] str = "test";
-    int x = 3;
-    y[0, 0] = 4;
-    if (x > 2) {
-        int x = 4;
-        x = x + 1;
-    }
-    int[2, 3] z;
-    z = y;
-    y[0, 0] = 3;
-    x = z[1, 2];
-    return [timesTwo: x];
+    float x = 1.5;
+    float[] y = [3.0, 3.0];
+    char z = 4;
+    bool a = true;
+    return 2;
 }

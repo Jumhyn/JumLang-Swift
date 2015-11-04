@@ -89,7 +89,7 @@ class DoWhile: Statement {
     }
 
     override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        var label = gen.reserveLabel()
+        let label = gen.reserveLabel()
         stmt.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: label)
         gen.appendLabel(label)
         expr.generateLLVMBranchesWithGenerator(gen, trueLabel: before, falseLabel: after)

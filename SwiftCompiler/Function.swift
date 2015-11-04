@@ -32,12 +32,12 @@ class Function : Node {
     override func generateLLVMWithGenerator(gen: Generator) {
         var signatureString = "define \(signature.id.type) \(signature.id) ("
         for arg in signature.args {
-            signatureString.extend("\(arg.type) %\(arg.op)")
-            if find(signature.args, arg) < signature.args.count-1 {
-                signatureString.extend(",")
+            signatureString += "\(arg.type) %\(arg.op)"
+            if signature.args.indexOf(arg) < signature.args.count-1 {
+                signatureString += ","
             }
         }
-        signatureString.extend(") {")
+        signatureString += ") {"
         gen.appendInstruction(signatureString)
 
         for arg in signature.args {
@@ -46,7 +46,7 @@ class Function : Node {
             arg.allocated = true
         }
 
-        var before = gen.reserveLabel(), after = gen.reserveLabel()
+        let before = gen.reserveLabel(), after = gen.reserveLabel()
         if body.needsBeforeLabel() {
             gen.appendLabel(before)
         }

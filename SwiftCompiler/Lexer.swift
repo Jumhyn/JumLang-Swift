@@ -52,10 +52,10 @@ class Lexer {
 
     //load the file if it contains anything, otherwise initialize with an empty string
     convenience init(file: String) {
-        if let content = String(contentsOfFile:file, encoding: NSUTF8StringEncoding, error: nil) {
+        do {
+            let content = try String(contentsOfFile:file, encoding: NSUTF8StringEncoding)
             self.init(content)
-        }
-        else {
+        } catch _ {
             self.init("")
         }
     }
@@ -79,8 +79,8 @@ class Lexer {
         }
         else { //... if the following token is not a number, word, or string literal, it must be some other symbol
             let lookback = currentChar
-            switch String(currentChar, nextChar()) {
-            case let tok where contains(["<=", ">=", "==", "!=", "&&", "||"], tok):
+            switch String(characters: currentChar, nextChar()) {
+            case let tok where ["<=", ">=", "==", "!=", "&&", "||"].contains(tok):
                 //two character token
                 advance()
                 return Token(tok)
@@ -144,7 +144,7 @@ class Lexer {
             var doubleVal = Double(val)
             var powerOfTen: Double = 1.0
             while currentChar.isDigit() {
-                doubleVal += Double(currentChar.toInt()!) / (10.0 ^ powerOfTen)
+                doubleVal += Double(currentChar.toInt()!) / pow(10.0, powerOfTen++)
                 advance()
             }
             return .Decimal(doubleVal)

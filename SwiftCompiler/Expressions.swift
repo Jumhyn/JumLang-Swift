@@ -9,7 +9,7 @@
 
 import Foundation
 
-class Expression: Node, Printable {
+class Expression: Node, CustomStringConvertible {
     var op: Token
     var type: TypeBase
 
@@ -56,7 +56,7 @@ class Expression: Node, Printable {
                 }
             }
             if opString == "" {
-                error("can't convert \(type) to \(to)", line)
+                error("can't convert \(type) to \(to)", line: line)
             }
             gen.appendInstruction("\(temp) = \(opString) \(type) \(reduced) to \(to)")
             return temp
@@ -68,7 +68,7 @@ class Expression: Node, Printable {
     }
 }
 
-extension Expression: Printable, Streamable {
+extension Expression: Streamable {
     //TODO: Move 'description' getter to this extension
 
     func writeTo<Target : OutputStreamType>(inout target: Target) {
@@ -118,7 +118,7 @@ class Identifier: Expression, Equatable {
     }
 
     override func LLVMString() -> String {
-        var prefix = isGlobal ? "@" : "%"
+        let prefix = isGlobal ? "@" : "%"
         var postfix = isArgument ? ".arg" : ".\(enclosingFuncName).\(scopeNumber)"
         if isGlobal {
             postfix = ""
@@ -149,7 +149,7 @@ class ArrayAccess: Identifier {
         self.indexExpr = indexExpr
         self.arrayId = arrayId
         if !(arrayId.type is ArrayType) {
-            error("attempt to access member of non-array type", line)
+            error("attempt to access index of non-array type", line: line)
         }
         super.init(op: arrayId.op, type: (arrayId.type as! ArrayType).to, line: line)
     }
@@ -196,7 +196,7 @@ class Arithmetic: Operator {
     init(op: Token, expr1: Expression, expr2: Expression, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type: Type_max(expr1.type, expr2.type), line: line)
+        super.init(op: op, type: Type_max(expr1.type, type2: expr2.type), line: line)
     }
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
@@ -289,19 +289,19 @@ class ArrayLiteral: Constant {
             return self
         }
         else {
-            error("cannot convert array to non-array type", line)
+            error("cannot convert array to non-array type", line: line)
         }
     }
 
     override func LLVMString() -> String {
         var ret = "["
         for i in 0 ..< values.count {
-            ret.extend("\(values[i].type) \(values[i])")
+            ret += "\(values[i].type) \(values[i])"
             if i < values.count - 1 {
-                ret.extend(", ")
+                ret += ", "
             }
         }
-        ret.extend("]")
+        ret += "]"
         return ret
     }
 }
@@ -327,7 +327,7 @@ class BooleanConstant: Constant, Logical {
                 gen.appendInstruction("br label %L\(falseLabel)")
             }
         default:
-            error("how did this even happen", line)
+            error("how did this even happen", line: line)
         }
     }
 }
@@ -351,7 +351,7 @@ class And: Expression, Logical {
     }
 
     func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
-        var label = (falseLabel == 0) ? gen.reserveLabel() : falseLabel
+        let label = (falseLabel == 0) ? gen.reserveLabel() : falseLabel
 
         expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: 0, falseLabel: label)
         expr2.generateLLVMBranchesWithGenerator(gen, trueLabel: trueLabel, falseLabel: falseLabel)
@@ -381,7 +381,7 @@ class Or: Expression, Logical {
     }
 
     func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
-        var label = (trueLabel == 0) ? gen.reserveLabel() : trueLabel
+        let label = (trueLabel == 0) ? gen.reserveLabel() : trueLabel
 
         expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: 0)
         expr2.generateLLVMBranchesWithGenerator(gen, trueLabel: trueLabel, falseLabel: falseLabel)
@@ -420,7 +420,7 @@ class Relation: Expression, Logical {
     }
 
     func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
-        let maxType = Type_max(expr1.type, expr2.type)
+        let maxType = Type_max(expr1.type, type2: expr2.type)
         let reduced1 = expr1.convertTo(maxType, withGenerator: gen)
         let reduced2 = expr2.convertTo(maxType, withGenerator: gen)
 
@@ -459,7 +459,7 @@ class Call: Expression {
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
         var reducedArray: [Expression] = []
-        var index = 0
+        let index = 0
         for arg in args {
             reducedArray.append(arg.convertTo(signature.args[index].type, withGenerator: gen))
         }
@@ -473,13 +473,13 @@ class Call: Expression {
         var callString = "call \(type) \(id) ("
         var index = 0
         for arg in args {
-            callString.extend("\(arg.type) \(arg)")
+            callString += "\(arg.type) \(arg)"
             if index < args.count-1 {
-                callString.extend(",")
+                callString += ","
             }
             index++
         }
-        callString.extend(")")
+        callString += ")"
         return callString
     }
 }

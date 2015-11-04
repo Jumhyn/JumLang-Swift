@@ -44,7 +44,7 @@ class Parser {
             topScope = savedScope
             return Function(signature: proto, body: stmt, line: lexer.line)
         }
-        error("expected statement", lexer.line)
+        error("expected statement", line: lexer.line)
     }
 
     func prototype() -> Prototype {
@@ -60,7 +60,7 @@ class Parser {
         //if there are arguments, get them
         if lookahead == .Colon {
             self.match(.Colon)
-            do {
+            repeat {
                 let varType = self.type()
                 let varIdTok = lookahead
                 self.match(.Identifier(nil))
@@ -112,13 +112,13 @@ class Parser {
                         ret = ArrayType(numElements: 0, to: ret)
                         break arraySizeLoop
                     default:
-                        error("expected array type declaration", lexer.line)
+                        error("expected array type declaration", line: lexer.line)
                     }
                 }
             }
             return ret
         default:
-            error("expected type", lexer.line)
+            error("expected type", line: lexer.line)
         }
     }
 
@@ -128,17 +128,17 @@ class Parser {
             lookahead = lexer.nextToken()
         }
         else {
-            error("expected '\(token)' but found '\(lookahead)'", lexer.line)
+            error("expected '\(token)' but found '\(lookahead)'", line: lexer.line)
         }
     }
 
-    func match(tokens: Token ...) {
+    func matchOneOf(tokens: Token ...) {
         //match any one of multiple tokens
-        if (contains(tokens, lookahead) || contains(tokens, .Any)) {
+        if (tokens.contains(lookahead) || tokens.contains(.Any)) {
             lookahead = lexer.nextToken()
         }
         else {
-            error("expected \(tokens) instead of \(lookahead)", lexer.line)
+            error("expected \(tokens) but found \(lookahead)", line: lexer.line)
         }
     }
 
@@ -198,7 +198,7 @@ extension Parser {
             self.match(.Semi)
             return Assignment(id: id, expr: expr, line: lexer.line)
         default:
-            error("expected variable declaration", lexer.line)
+            error("expected variable declaration", line: lexer.line)
         }
     }
 
@@ -212,9 +212,9 @@ extension Parser {
         if lookahead == .Assign {
             self.match(.Assign)
             let expr = self.arrayLiteral()
-            let numElements = (expr.type as! ArrayType).numElements
+            //let numElements = (expr.type as? ArrayType)?.numElements ?? error("array literal must have array type", line: lexer.line);
             if !validateArrayType(type, againstQualified: expr.type as! ArrayType) {
-                error("array literal and declaration must agree in number of elements", lexer.line)
+                error("array literal and declaration must agree in number of elements", line: lexer.line)
             }
             else {
                 self.match(.Semi)
@@ -259,7 +259,7 @@ extension Parser {
             topScope = topScope.previousScope!
             return stmt
         }
-        error("expected statement", lexer.line)
+        error("expected statement", line: lexer.line)
     }
 
     func sequence() -> Statement? {
@@ -275,7 +275,7 @@ extension Parser {
         self.match(.If)
         let expr = self.expression()
         if !(expr is Logical) {
-            error("expected expression with boolean result", lexer.line)
+            error("expected expression with boolean result", line: lexer.line)
         }
         let stmt = self.statement()
         if self.lookahead == .Else {
@@ -289,7 +289,7 @@ extension Parser {
         self.match(.While)
         let expr = self.expression()
         if !(expr is Logical) {
-            error("expected expression with boolean result", lexer.line)
+            error("expected expression with boolean result", line: lexer.line)
         }
         return While(expr: expr as! Logical, stmt: self.statement(), line: lexer.line)
     }
@@ -300,7 +300,7 @@ extension Parser {
         self.match(.While)
         let expr = self.expression()
         if !(expr is Logical) {
-            error("expected expression with boolean result", lexer.line)
+            error("expected expression with boolean result", line: lexer.line)
         }
         self.match(.Semi)
         return DoWhile(stmt: stmt, expr: expr as! Logical, line: lexer.line)
@@ -313,7 +313,7 @@ extension Parser {
             return Return(from: currentFunc, line: lexer.line)
         }
         if currentFunc.id.type == TypeBase.voidType() {
-            error("returning value from void function", lexer.line)
+            error("returning value from void function", line: lexer.line)
         }
         let expr = self.orExpression()
         self.match(.Semi)
@@ -346,7 +346,7 @@ extension Parser {
         case .Identifier(_):
             return self.identifier()
         default:
-            error("expected expression", lexer.line)
+            error("expected expression", line: lexer.line)
         }
     }
 
@@ -356,7 +356,7 @@ extension Parser {
             self.match(.Or)
             let rhs = self.andExpression()
             if !(lhs is Logical && rhs is Logical) {
-                error("expected expression with boolean result", lexer.line)
+                error("expected expression with boolean result", line: lexer.line)
             }
             lhs = Or(expr1: lhs as! Logical, expr2: rhs as! Logical, line: lexer.line)
         }
@@ -369,7 +369,7 @@ extension Parser {
             self.match(.And)
             let rhs = self.equalityExpression()
             if !(lhs is Logical && rhs is Logical) {
-                error("expected expression with boolean result", lexer.line)
+                error("expected expression with boolean result", line: lexer.line)
             }
             lhs = And(expr1: lhs as! Logical, expr2: rhs as! Logical, line: lexer.line)
         }
@@ -380,7 +380,7 @@ extension Parser {
         var lhs = self.inequalityExpression()
         while lookahead == .Equal || lookahead == .NEqual {
             let op = lookahead
-            self.match(.Equal, .NEqual)
+            self.matchOneOf(.Equal, .NEqual)
             let rhs = self.inequalityExpression()
             lhs = Relation(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -391,7 +391,7 @@ extension Parser {
         var lhs = self.additionExpression()
         while lookahead == .Less || lookahead == .LEqual || lookahead == .Greater || lookahead == .GEqual {
             let op = lookahead
-            self.match(.Less, .LEqual, .Greater, .GEqual)
+            self.matchOneOf(.Less, .LEqual, .Greater, .GEqual)
             let rhs = self.additionExpression()
             lhs = Relation(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -402,7 +402,7 @@ extension Parser {
         var lhs = self.multiplicationExpression()
         while lookahead == .Plus || lookahead == .Minus {
             let op = lookahead
-            self.match(.Plus, .Minus)
+            self.matchOneOf(.Plus, .Minus)
             let rhs = self.multiplicationExpression()
             lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -413,7 +413,7 @@ extension Parser {
         var lhs = self.unaryExpression()
         while lookahead == .Times || lookahead == .Divide {
             let op = lookahead
-            self.match(.Times, .Divide)
+            self.matchOneOf(.Times, .Divide)
             let rhs = self.unaryExpression()
             lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -440,7 +440,7 @@ extension Parser {
             self.match(.Not)
             let expr = self.unaryExpression()
             if !(expr is Logical) {
-                error("expected expression with boolean result", lexer.line)
+                error("expected expression with boolean result", line: lexer.line)
             }
             return Not(op: .Not, expr: expr as! Logical, line: lexer.line)
         }
@@ -479,7 +479,7 @@ extension Parser {
             while lookahead != .RBrack {
                 let expr = self.orExpression()
                 if !expr.type.numeric || expr.type.floatingPoint {
-                    error("expected numeric expression for array index", lexer.line)
+                    error("expected numeric expression for array index", line: lexer.line)
                 }
                 exprStack.append(expr)
                 if lookahead == .RBrack {
@@ -509,7 +509,7 @@ extension Parser {
         case .LBrack:
             return self.arrayLiteral()
         default:
-            error("expected constant", lexer.line)
+            error("expected constant", line: lexer.line)
         }
     }
 
@@ -537,7 +537,11 @@ extension Parser {
             self.match(.StringLiteral(nil))
             return ArrayLiteral(values: values, line: lexer.line)
         default:
-            error("expected array or string literal", lexer.line)
+            error("expected array or string literal", line: lexer.line)
         }
     }
+}
+
+@noreturn func error(err: String, line: UInt) {
+    fatalError("\(err) near line \(line)")
 }

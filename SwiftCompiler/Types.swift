@@ -36,7 +36,7 @@ class TypeBase : LLVMPrintable, Equatable {
         self.signed = signed
         self.floatingPoint = floatingPoint
         self.apparentSize = apparentSize
-        self.actualSize = ((apparentSize - 1) / 8 + 1) * 8 //TODO: fix actualSize calculation
+        self.actualSize = apparentSize == 0 ? 0 : ((apparentSize - 1) / 8 + 1) * 8 //TODO: fix actualSize calculation
     }
 
     func LLVMString() -> String {
@@ -58,7 +58,7 @@ class TypeBase : LLVMPrintable, Equatable {
             return BooleanConstant(boolVal: false, line: 0)
         }
         else {
-            error("cannot initialize \(self) with default value", 0)
+            error("cannot initialize \(self) with default value", line: 0)
         }
     }
 
@@ -84,16 +84,16 @@ class TypeBase : LLVMPrintable, Equatable {
         return TypeBase(numeric: false, signed: false, floatingPoint: false, apparentSize: 0)
     }
     class func boolType() -> TypeBase {
-        return TypeBase(numeric: false, signed: false, floatingPoint: false, apparentSize: 1)
+        return BoolType()
     }
     class func charType() -> TypeBase {
-        return TypeBase(numeric: true, signed: true, floatingPoint: false, apparentSize: 8)
+        return IntegerType(bytes: 1)
     }
     class func intType() -> TypeBase {
-        return TypeBase(numeric: true, signed: true, floatingPoint: false, apparentSize: 32)
+        return IntegerType(bytes: 4)
     }
     class func floatType() -> TypeBase {
-        return TypeBase(numeric: true, signed: true, floatingPoint: true, apparentSize: 64)
+        return FloatType(doubleWidth: true)
     }
 }
 
@@ -122,7 +122,7 @@ class FloatType : NumericType {
 
     init(doubleWidth: Bool) {
         self.doubleWidth = doubleWidth
-        super.init()
+        super.init(signed: true, floatingPoint: true, apparentSize: doubleWidth ? 64 : 32)
     }
 
     override func LLVMString() -> String {
@@ -131,8 +131,8 @@ class FloatType : NumericType {
 }
 
 class IntegerType : NumericType {
-    override init() {
-        super.init()
+    init(bytes: UInt) {
+        super.init(signed: true, floatingPoint: false, apparentSize: bytes * 8)
     }
 
     override func LLVMString() -> String {
@@ -171,7 +171,7 @@ class ArrayType : PointerType {
     }
 
     override func defaultConstant() -> Constant {
-        var defaultVal = to.defaultConstant()
+        let defaultVal = to.defaultConstant()
         return ArrayLiteral(values: Array<Constant>(count: Int(numElements), repeatedValue: defaultVal), line: 0)
     }
 
