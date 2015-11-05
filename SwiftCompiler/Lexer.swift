@@ -10,7 +10,7 @@ import Foundation
 
 class Lexer {
 
-    var line: UInt = 0
+    var line: UInt = 1
     var characterIndex: String.Index
 
     //buffer that stores the full string of the file currently being lexed

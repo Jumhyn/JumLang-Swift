@@ -3,9 +3,6 @@
 }
 
 [int main] {
-    float x = 1.5;
-    float[] y = [3.0, 3.0];
-    char z = 4;
-    bool a = true;
-    return 2;
+    char[] str = "test";
+    return 0;
 }

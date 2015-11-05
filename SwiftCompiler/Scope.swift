@@ -48,7 +48,7 @@ class Scope {
 
     func setIdentifier(id: Identifier, forToken token: Token) {
         if let exists = symTable[token] {
-            //TODO: error handling...
+            error("attempted to redefine identifier '\(id.op.LLVMString())' declared on line \(exists.line)", line: id.line)
         }
         else {
             symTable[token] = id
@@ -64,7 +64,7 @@ class Scope {
 
     func setPrototype(proto: Prototype, forToken token: Token) {
         if let exists = globalScope.funcTable[token] {
-            //TODO: error handling...
+            error("attempted to redefine function '\(proto.id.op.LLVMString())' declared on line \(exists.line)", line: proto.line)
         }
         else {
             globalScope.funcTable[token] = proto
