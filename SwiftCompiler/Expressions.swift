@@ -141,6 +141,41 @@ class Identifier: Expression, Equatable {
     }
 }
 
+class MemberAccess: Identifier {
+    var index: UInt
+    var parent: Identifier
+
+    init(member: Identifier, parent: Identifier, line: UInt) {
+        if let type = parent.type as? AggregateType {
+            self.parent = parent
+            if let index = type.getMemberIndex(member) {
+                self.index = UInt(index)
+            }
+            else {
+                error("could not find member \(member) in type \(parent.type)", line: line)
+            }
+        }
+        else {
+            error("attempt to access member of non-aggregate type", line: line)
+        }
+        super.init(op: parent.op, type: member.type, line: line)
+    }
+
+    override func reduceWithGenerator(gen: Generator) -> Expression {
+        let ptr = getPointerWithGenerator(gen)
+        let temp = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp) = load \(type)* \(ptr)");
+        return temp
+    }
+
+    override func getPointerWithGenerator(gen: Generator) -> Expression {
+        let parentPtr = parent.getPointerWithGenerator(gen)
+        let temp = gen.getTemporaryOfType(type)
+        gen.appendInstruction("\(temp) = getelementptr \(parentPtr.type)* \(parentPtr), i32 0, i32 \(self.index)")
+        return temp;
+    }
+}
+
 class ArrayAccess: Identifier {
     var indexExpr: Expression
     var arrayId: Identifier
@@ -155,12 +190,9 @@ class ArrayAccess: Identifier {
     }
 
     override func reduceWithGenerator(gen: Generator) -> Expression {
-        let ptr = arrayId.getPointerWithGenerator(gen)
-        let index = indexExpr.reduceWithGenerator(gen)
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = getelementptr \(ptr.type)* \(ptr), i32 0, i32 \(index)")
+        let ptr = getPointerWithGenerator(gen)
         let temp2 = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp2) = load \(type)* \(temp)")
+        gen.appendInstruction("\(temp2) = load \(type)* \(ptr)")
         return temp2
     }
 

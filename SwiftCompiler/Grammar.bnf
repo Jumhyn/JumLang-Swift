@@ -1,0 +1,122 @@
+<program>       ::= <functions>
+
+<functions>     ::= <function>
+                  | <function> <functions>
+
+<function>      ::= <prototype> <block>
+
+<prototype>     ::= "[" <type-id> <opt-arg-list> "]"
+
+<block>         ::= "{" <opt-stmts> "}"
+
+<type-id>       ::= <type> <identifier>
+
+<arg-list>      ::= ":" <args>
+                  | ""
+
+<args>          ::= <type-id> <opt-args>
+
+<opt-args>      ::= "," <type-id> <opt-args>
+                  | ""
+
+<opt-stmts>     ::= <stmt> <opt-stmts>
+                  | ""
+
+<non-arr-type>  ::= "bool"
+                  | "char"
+                  | "int"
+                  | "float"
+
+<type>          ::= <non-arr-type> <opt-array>
+
+<opt-array>     ::= "[" <opt-int> "]" <opt-array>
+                  | ""
+
+<opt-int>       ::= <int-constant>
+                  | ""
+
+<stmt>          ::= <if-stmt>
+                  | <while-stmt>
+                  | <do-stmt>
+                  | <return-stmt>
+                  | <block>
+                  | <assignment>
+                  | <declaration>
+
+<if-stmt>       ::= "if" <expression> <block> <else-stmt>
+
+<else-stmt>     ::= "else" <block>
+
+<while-stmt>    ::= "while" <expr> <block>
+
+<do-stmt>       ::= "do" <block> "while" <expr> ";"
+
+<return-stmt>   ::= "return" <opt-expr> ";"
+
+<opt-expr>      ::= <expr>
+                  | ""
+
+<assignment>    ::= <identifier> "=" <expr> ";"
+
+<declaration>   ::= <type-id> ";"
+                  | <type> <assignment> ";"
+
+<expr>          ::= "(" <or-expr> ")"
+                  | <constant>
+                  | <identifier>
+                  | <function-call>
+
+<identifier>    ::= <name> <opt-accesses>
+
+<opt-accesses>  ::= '[ <name> ']' <opt-accesses>
+
+<function-call> ::= "[" <identifier> <call-arg-list> "]"
+
+<call-arg-list> ::= ":" <or-expr> <opt-call-args>
+
+<opt-call-args> ::= "," <or-expr> <opt-call-args>
+                  | ""
+
+<constant>      ::= <bool-constant>
+                  | <int-constant>
+                  | <float-constant>
+
+<or-expr>       ::= <and-expr> "||" <or-expr>
+                  | <and-expr>
+
+<and-expr>      ::= <equality-expr> "&&" <and-expr>
+                  | <equality-expr>
+
+<equality-expr> ::= <inequality-expr> <equality-op> <equality-expr>
+                  | <inequality-expr>
+
+<equality-op>   ::= "=="
+                  | "!="
+
+<inequality-expr> ::= <addition-expr> <inequality-op> <addition-expr>
+                    | <addition-expr>
+
+<inequality-op> ::= ">"
+                  | "<"
+                  | ">="
+                  | "<="
+
+<addition-expr> ::= <mul-expr> <addition-op> <addition-expr>
+                  | <mul-expr>
+
+<addition-op>   ::= "+"
+                  | "-"
+
+<mul-expr>      ::= <unary> <mul-op> <mul-expr>
+
+<mul-op>        ::= "*"
+                  | "/"
+
+<unary>         ::= <addition-op> <expr>
+                  | "!" <unary>
+                  | <expr>
+
+
+
+
+

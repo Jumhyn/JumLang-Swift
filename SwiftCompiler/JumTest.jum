@@ -4,5 +4,6 @@
 
 [int main] {
     char[] str = "test";
+    char x = str[0];
     return 0;
 }

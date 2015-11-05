@@ -8,22 +8,6 @@
 
 import Foundation
 
-func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
-    return lhs.equals(rhs)
-}
-
-func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
-    if (type1 == TypeBase.floatType() || type2 == TypeBase.floatType()) {
-        return TypeBase.floatType();
-    }
-    else if (type1 == TypeBase.intType() || type2 == TypeBase.intType()) {
-        return TypeBase.intType();
-    }
-    else {
-        return TypeBase.charType();
-    }
-}
-
 class TypeBase : LLVMPrintable, Equatable {
     var numeric = false
     var signed = true
@@ -182,5 +166,44 @@ class ArrayType : PointerType {
         else {
             return false
         }
+    }
+}
+
+class AggregateType: TypeBase {
+    var members: [Identifier]
+    var name: String
+
+    init(members: [Identifier], name: String) {
+        self.members = members
+        self.name = name
+        var sum: UInt = 0
+        for member in members {
+            sum += member.type.apparentSize
+        }
+        super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: sum)
+    }
+
+    func getMemberIndex(member: Identifier) -> Int? {
+        return members.indexOf(member)
+    }
+
+    override func LLVMString() -> String {
+        return "%\(name)"
+    }
+}
+
+func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
+    return lhs.equals(rhs)
+}
+
+func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
+    if (type1 == TypeBase.floatType() || type2 == TypeBase.floatType()) {
+        return TypeBase.floatType();
+    }
+    else if (type1 == TypeBase.intType() || type2 == TypeBase.intType()) {
+        return TypeBase.intType();
+    }
+    else {
+        return TypeBase.charType();
     }
 }

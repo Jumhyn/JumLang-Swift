@@ -454,45 +454,54 @@ extension Parser {
         let idTok = lookahead
         let id = self.identifier()
         var args: [Expression] = []
-        let signature = globalScope.prototypeForToken(idTok)
-        if signature.args.count > 0 {
-            self.match(.Colon)
-            while (true) {
-                let expr = self.orExpression()
-                args.append(expr)
-                if lookahead == .RBrack {
-                    break
+        if let signature = globalScope.prototypeForToken(idTok) {
+            if signature.args.count > 0 {
+                self.match(.Colon)
+                while (true) {
+                    let expr = self.orExpression()
+                    args.append(expr)
+                    if lookahead == .RBrack {
+                        break
+                    }
+                    self.match(.Comma)
                 }
-                self.match(.Comma)
             }
+            self.match(.RBrack)
+            return Call(id: id, args: args, signature: signature, line: lexer.line)
         }
-        self.match(.RBrack)
-        return Call(id: id, args: args, signature: signature, line: lexer.line)
+        else {
+            error("use of undecalred identifier \(idTok)", line: lexer.line)
+        }
     }
 
     func identifier() -> Identifier {
-        var id = topScope.identifierForToken(lookahead)
-        self.match(.Identifier(nil))
-        var exprStack: [Expression] = []
-        if lookahead == .LBrack {
-            self.match(.LBrack)
-            while lookahead != .RBrack {
-                let expr = self.orExpression()
-                if !expr.type.numeric || expr.type.floatingPoint {
-                    error("expected numeric expression for array index", line: lexer.line)
+        let idTok = lookahead
+        if var id = topScope.identifierForToken(idTok) {
+            self.match(.Identifier(nil))
+            var exprStack: [Expression] = []
+            if lookahead == .LBrack {
+                self.match(.LBrack)
+                while lookahead != .RBrack {
+                    let expr = self.orExpression()
+                    if !expr.type.numeric || expr.type.floatingPoint {
+                        error("expected numeric expression for array index", line: lexer.line)
+                    }
+                    exprStack.append(expr)
+                    if lookahead == .RBrack {
+                        self.match(.RBrack)
+                        break
+                    }
+                    self.match(.Comma)
                 }
-                exprStack.append(expr)
-                if lookahead == .RBrack {
-                    self.match(.RBrack)
-                    break
+                while exprStack.count > 0 {
+                    id = ArrayAccess(indexExpr: exprStack.removeLast(), arrayId: id, line: lexer.line)
                 }
-                self.match(.Comma)
             }
-            while exprStack.count > 0 {
-                id = ArrayAccess(indexExpr: exprStack.removeLast(), arrayId: id, line: lexer.line)
-            }
+            return id
         }
-        return id
+        else {
+            error("use of undecalred identifier \(idTok)", line: lexer.line)
+        }
     }
 
     func constantExpression() -> Constant {

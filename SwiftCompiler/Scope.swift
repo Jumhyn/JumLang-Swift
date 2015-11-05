@@ -11,6 +11,7 @@ import Foundation
 class Scope {
     var symTable: [Token : Identifier] = [:]
     var funcTable: [Token : Prototype] = [:]
+    var typeTable: [Token : TypeBase] = [:]
     var scopeCount: UInt = 0
     var previousScope: Scope? = nil
 
@@ -34,7 +35,7 @@ class Scope {
         self.globalScope.scopeCount++
     }
 
-    func identifierForToken(token: Token) -> Identifier {
+    func identifierForToken(token: Token) -> Identifier? {
         for (var currentScope: Scope? = self; currentScope != nil; currentScope = currentScope?.previousScope) {
             if let ret = symTable[token] {
                 return ret
@@ -43,7 +44,7 @@ class Scope {
         if let ret = globalScope.symTable[token] {
             return ret
         }
-        return self.prototypeForToken(token).id
+        return self.prototypeForToken(token)?.id
     }
 
     func setIdentifier(id: Identifier, forToken token: Token) {
@@ -55,7 +56,7 @@ class Scope {
         }
     }
 
-    func prototypeForToken(token: Token) -> Prototype {
+    func prototypeForToken(token: Token) -> Prototype? {
         if let proto = globalScope.funcTable[token] {
             return proto
         }
@@ -69,5 +70,9 @@ class Scope {
         else {
             globalScope.funcTable[token] = proto
         }
+    }
+
+    func typeForToken(token: Token) -> TypeBase? {
+        return globalScope.typeTable[token]
     }
 }
