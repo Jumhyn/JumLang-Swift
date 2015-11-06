@@ -2,6 +2,11 @@
     return 2 * x;
 }
 
+[struct test:
+    int x,
+    int y
+]
+
 [int main] {
     char[] str = "test";
     char x = str[0];

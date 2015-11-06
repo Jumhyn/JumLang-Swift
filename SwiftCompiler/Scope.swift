@@ -11,7 +11,7 @@ import Foundation
 class Scope {
     var symTable: [Token : Identifier] = [:]
     var funcTable: [Token : Prototype] = [:]
-    var typeTable: [Token : TypeBase] = [:]
+    var typeTable: [Token : NamedType] = [:]
     var scopeCount: UInt = 0
     var previousScope: Scope? = nil
 
@@ -49,7 +49,7 @@ class Scope {
 
     func setIdentifier(id: Identifier, forToken token: Token) {
         if let exists = symTable[token] {
-            error("attempted to redefine identifier '\(id.op.LLVMString())' declared on line \(exists.line)", line: id.line)
+            error("attempted to redefine identifier '\(exists.op.LLVMString())' declared on line \(exists.line)", line: id.line)
         }
         else {
             symTable[token] = id
@@ -57,15 +57,12 @@ class Scope {
     }
 
     func prototypeForToken(token: Token) -> Prototype? {
-        if let proto = globalScope.funcTable[token] {
-            return proto
-        }
-        error("use of undeclared identifier \(token)", line: 0)
+        return globalScope.funcTable[token]
     }
 
     func setPrototype(proto: Prototype, forToken token: Token) {
         if let exists = globalScope.funcTable[token] {
-            error("attempted to redefine function '\(proto.id.op.LLVMString())' declared on line \(exists.line)", line: proto.line)
+            error("attempted to redefine function '\(exists.id.op.LLVMString())' declared on line \(exists.line)", line: proto.line)
         }
         else {
             globalScope.funcTable[token] = proto
@@ -74,5 +71,14 @@ class Scope {
 
     func typeForToken(token: Token) -> TypeBase? {
         return globalScope.typeTable[token]
+    }
+
+    func setType(type: NamedType, forToken token: Token) {
+        if let exists = globalScope.typeTable[token]  {
+            error("attempted to redefine type '\(exists.LLVMString())' declared on line \(exists.line)", line: type.line)
+        }
+        else {
+            globalScope.typeTable[token] = type
+        }
     }
 }

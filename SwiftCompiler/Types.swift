@@ -169,26 +169,48 @@ class ArrayType : PointerType {
     }
 }
 
-class AggregateType: TypeBase {
-    var members: [Identifier]
-    var name: String
+class NamedType: TypeBase {
+    var name: Token
+    var line: UInt
 
-    init(members: [Identifier], name: String) {
-        self.members = members
+    init(numeric: Bool, signed: Bool, floatingPoint: Bool, apparentSize: UInt, name: Token, line: UInt) {
         self.name = name
+        self.line = line
+        super.init(numeric: numeric, signed: signed, floatingPoint: floatingPoint, apparentSize: apparentSize);
+    }
+
+    override func LLVMString() -> String {
+        return "%\(name.LLVMString())"
+    }
+
+    func LLVMLongString() -> String {
+        return "%\(name.LLVMString())"
+    }
+}
+
+class AggregateType: NamedType {
+    var members: [Identifier]
+
+    init(members: [Identifier], name: Token, line: UInt) {
+        self.members = members
         var sum: UInt = 0
         for member in members {
-            sum += member.type.apparentSize
+            sum += member.type.actualSize
         }
-        super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: sum)
+        super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: sum, name: name, line: line)
     }
 
     func getMemberIndex(member: Identifier) -> Int? {
         return members.indexOf(member)
     }
 
-    override func LLVMString() -> String {
-        return "%\(name)"
+    override func LLVMLongString() -> String {
+        var typeString = "{ \(members[0].type.LLVMString())"
+        for member in members[1..<members.count] {
+            typeString += ", \(member.type.LLVMString())"
+        }
+        typeString += " }"
+        return typeString
     }
 }
 

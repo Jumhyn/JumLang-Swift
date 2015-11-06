@@ -32,8 +32,11 @@ class Generator {
         output.extendLn(code)
     }
 
-    func generateLLVMForProgram(program: [Function]) {
-        for function in program {
+    func generateLLVMForProgram(program: Program) {
+        for type in program.globalScope.typeTable.values {
+            self.appendInstruction("\(type.LLVMString()) = \(type.LLVMLongString())")
+        }
+        for function in program.funcs {
             function.generateLLVMWithGenerator(self)
         }
     }

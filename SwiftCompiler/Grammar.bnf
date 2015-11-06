@@ -1,9 +1,14 @@
-<program>       ::= <functions>
+<program>       ::= <top-decls>
 
-<functions>     ::= <function>
-                  | <function> <functions>
+<top-decls>     ::= <top-decl>
+                  | <top-decl> <top-decls>
+
+<top-decl>      ::= <function>
+                  | <struct>
 
 <function>      ::= <prototype> <block>
+
+<struct>        ::= "[" "struct" <name> ":" <arg-list> "]"
 
 <prototype>     ::= "[" <type-id> <opt-arg-list> "]"
 

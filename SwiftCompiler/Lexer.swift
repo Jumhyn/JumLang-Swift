@@ -42,6 +42,7 @@ class Lexer {
             "do" : .Do,
             "break" : .Break,
             "return" : .Return,
+            "struct" : .Struct,
             "char" : .Type(.charType()),
             "int" : .Type(.intType()),
             "float" : .Type(.floatType()),

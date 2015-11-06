@@ -21,7 +21,7 @@ enum Token {
     case LBrack, RBrack
     case Colon, Semi, Comma, Dot
 
-    case If, Else, While, Do, Break, Return
+    case If, Else, While, Do, Break, Return, Struct
 
     case Temp
 
@@ -167,6 +167,8 @@ extension Token : CustomStringConvertible, Streamable {
             return "break"
         case .Return:
             return "return"
+        case .Struct:
+            return "struct"
 
         case .Temp:
             return "t"
@@ -404,6 +406,11 @@ func ==(lhs: Token, rhs: Token) -> Bool {
     case .Return:
         switch rhs {
         case .Return: return true
+        default: return false
+        }
+    case .Struct:
+        switch rhs {
+        case .Struct: return true
         default: return false
         }
 

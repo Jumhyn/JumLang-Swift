@@ -23,13 +23,29 @@ class Parser {
         self.topScope = self.globalScope
     }
 
-    func program() -> [Function] {
-        //a program is an array of functions
-        var ret: [Function] = []
+    func program() -> Program {
+        var funcs: [Function] = []
         while (lookahead == .LBrack) {
-            ret.append(self.function())
+            self.match(.LBrack)
+            if (lookahead == .Struct) {
+                self.structure()
+            }
+            else {
+                funcs.append(self.function())
+            }
         }
+        let ret = Program(funcs: funcs, globalScope: globalScope)
         return ret
+    }
+
+    func structure() {
+        self.match(.Struct)
+        let name = lookahead
+        self.match(.Identifier(nil))
+        let members = self.argList()
+        self.match(.RBrack)
+        let type = AggregateType(members: members, name: name, line: lexer.line)
+        globalScope.setType(type, forToken: name)
     }
 
     func function() -> Function {
@@ -48,7 +64,6 @@ class Parser {
     }
 
     func prototype() -> Prototype {
-        self.match(.LBrack)
         //get the return type of the function
         let funcType = self.type()
 
@@ -59,24 +74,7 @@ class Parser {
         var args: [Identifier] = []
         //if there are arguments, get them
         if lookahead == .Colon {
-            self.match(.Colon)
-            repeat {
-                let varType = self.type()
-                let varIdTok = lookahead
-                self.match(.Identifier(nil))
-
-                let id = Identifier(op: varIdTok, type: varType, line: lexer.line)
-                id.isArgument = true
-                args.append(id)
-                topScope.setIdentifier(id, forToken: varIdTok)
-
-                //if we are done, exit the loop
-                if lookahead == .RBrack {
-                    break
-                }
-                //otherwise, match a comma and possibly exit
-                self.match(.Comma)
-            } while (lookahead == .Type(nil))
+            args = self.argList()
         }
         self.match(.RBrack)
 
@@ -84,6 +82,29 @@ class Parser {
         let funcId = Identifier(op: funcIdTok, type: funcType, line: lexer.line)
         funcId.isGlobal = true
         return Prototype(id: funcId, args: args, line: lexer.line)
+    }
+
+    func argList() -> [Identifier] {
+        var args: [Identifier] = []
+        self.match(.Colon)
+        repeat {
+            let varType = self.type()
+            let varIdTok = lookahead
+            self.match(.Identifier(nil))
+
+            let id = Identifier(op: varIdTok, type: varType, line: lexer.line)
+            id.isArgument = true
+            args.append(id)
+            topScope.setIdentifier(id, forToken: varIdTok)
+
+            //if we are done, exit the loop
+            if lookahead == .RBrack {
+                break
+            }
+            //otherwise, match a comma and possibly exit
+            self.match(.Comma)
+        } while (lookahead == .Type(nil))
+        return args
     }
 
     func type() -> TypeBase {
@@ -118,7 +139,7 @@ class Parser {
             }
             return ret
         default:
-            error("expected type", line: lexer.line)
+            error("expected type name", line: lexer.line)
         }
     }
 
