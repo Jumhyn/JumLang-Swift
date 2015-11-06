@@ -145,11 +145,11 @@ class MemberAccess: Identifier {
     var index: UInt
     var parent: Identifier
 
-    init(member: Identifier, parent: Identifier, line: UInt) {
+    init(member: Expression, parent: Identifier, line: UInt) {
         if let type = parent.type as? AggregateType {
             self.parent = parent
-            if let index = type.getMemberIndex(member) {
-                self.index = UInt(index)
+            if let actualMember = type.getMemberWithName(member.op), index = type.getMemberIndex(actualMember) {
+                 self.index = UInt(index)
             }
             else {
                 error("could not find member \(member) in type \(parent.type)", line: line)
@@ -185,6 +185,9 @@ class ArrayAccess: Identifier {
         self.arrayId = arrayId
         if !(arrayId.type is ArrayType) {
             error("attempt to access index of non-array type", line: line)
+        }
+        if (!indexExpr.type.numeric || indexExpr.type.floatingPoint) {
+            error("array index must have integer-valued type", line: line)
         }
         super.init(op: arrayId.op, type: (arrayId.type as! ArrayType).to, line: line)
     }

@@ -200,8 +200,22 @@ class AggregateType: NamedType {
         super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: sum, name: name, line: line)
     }
 
-    func getMemberIndex(member: Identifier) -> Int? {
-        return members.indexOf(member)
+    func getMemberIndex(member: Expression) -> Int? {
+        if let id = member as? Identifier {
+            return members.indexOf(id)
+        }
+        else {
+            error("member access must be identifier", line: self.line)
+        }
+    }
+
+    func getMemberWithName(name: Token) -> Identifier? {
+        for member in members {
+            if member.op == name {
+                return member
+            }
+        }
+        return nil
     }
 
     override func LLVMLongString() -> String {

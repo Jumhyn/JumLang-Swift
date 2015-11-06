@@ -132,31 +132,27 @@ class Parser {
         case .Type(let type):
             var ret = type!
             self.match(.Type(nil))
-            if lookahead == .LBrack {
+            while lookahead == .LBrack {
                 self.match(.LBrack)
-                arraySizeLoop: while true {
-                    switch lookahead {
-                    case .Integer(let val):
-                        self.match(.Integer(nil))
-                        ret = ArrayType(numElements: UInt(val!), to: ret)
-                        if lookahead == .RBrack {
-                            self.match(.RBrack)
-                            break arraySizeLoop
-                        }
-                        self.match(.Comma)
-                    case .Comma:
-                        self.match(.Comma)
-                        ret = ArrayType(numElements: 0, to: ret)
-                    case .RBrack:
-                        self.match(.RBrack)
-                        ret = ArrayType(numElements: 0, to: ret)
-                        break arraySizeLoop
-                    default:
-                        error("expected array type declaration", line: lexer.line)
-                    }
+                switch lookahead {
+                case .Integer(let val):
+                    self.match(.Integer(nil))
+                    ret = ArrayType(numElements: UInt(val!), to: ret)
+                    self.match(.RBrack)
+                case .RBrack:
+                    self.match(.RBrack)
+                    ret = ArrayType(numElements: 0, to: ret)
+                default:
+                    error("expected array type declaration", line: lexer.line)
                 }
             }
             return ret
+        case .Identifier(_):
+            if let type = globalScope.typeForToken(lookahead) {
+                self.match(.Identifier(nil))
+                return type
+            }
+            fallthrough
         default:
             error("expected type name", line: lexer.line)
         }
@@ -196,7 +192,7 @@ extension Parser {
             return self.doWhileStatement()
         case .Return:
             return self.returnStatement()
-        case .Type(_):
+        case .Type(_), .Identifier(_) where globalScope.typeForToken(lookahead) != nil:
             return self.declaration()
         case .LBrack:
             //the beginning of a call
@@ -519,22 +515,18 @@ extension Parser {
         if var id = topScope.identifierForToken(idTok) {
             self.match(.Identifier(nil))
             var exprStack: [Expression] = []
-            if lookahead == .LBrack {
+            while lookahead == .LBrack {
                 self.match(.LBrack)
-                while lookahead != .RBrack {
-                    let expr = self.orExpression()
-                    if !expr.type.numeric || expr.type.floatingPoint {
-                        error("expected numeric expression for array index", line: lexer.line)
-                    }
-                    exprStack.append(expr)
-                    if lookahead == .RBrack {
-                        self.match(.RBrack)
-                        break
-                    }
-                    self.match(.Comma)
-                }
-                while exprStack.count > 0 {
+                let expr = self.orExpression()
+                exprStack.append(expr)
+                self.match(.RBrack)
+            }
+            while exprStack.count > 0 {
+                if id.type is ArrayType {
                     id = ArrayAccess(indexExpr: exprStack.removeLast(), arrayId: id, line: lexer.line)
+                }
+                else {
+                    id = MemberAccess(member: exprStack.removeFirst(), parent: id, line: lexer.line)
                 }
             }
             return id
@@ -592,5 +584,5 @@ extension Parser {
 }
 
 @noreturn func error(err: String, line: UInt) {
-    fatalError("error near line \(line): \(err)")
+    fatalError("near line \(line): \(err)")
 }
