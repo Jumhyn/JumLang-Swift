@@ -31,7 +31,9 @@ class Parser {
                 self.structure()
             }
             else {
-                funcs.append(self.function())
+                if let aFunc = self.function() {
+                    funcs.append(aFunc)
+                }
             }
         }
         let ret = Program(funcs: funcs, globalScope: globalScope)
@@ -48,19 +50,36 @@ class Parser {
         globalScope.setType(type, forToken: name)
     }
 
-    func function() -> Function {
+    func function() -> Function? {
         let savedScope = topScope
         topScope = Scope(previousScope: savedScope, globalScope: globalScope)
-        let proto = self.prototype()
-        currentFunc = proto
-        globalScope.setPrototype(proto, forToken: proto.id.op)
-        self.match(.LBrace)
-        if let stmt = self.sequence() {
-            self.match(.RBrace)
-            topScope = savedScope
-            return Function(signature: proto, body: stmt, line: lexer.line)
+        var proto = self.prototype()
+        if let exists = globalScope.prototypeForToken(proto.id.op) {
+            if exists.implemented {
+                error("attempt to redefine function \(proto) declared on line \(proto.id.line)", line: lexer.line)
+            }
+            else {
+                proto = exists
+            }
         }
-        error("expected statement", line: lexer.line)
+        else {
+            globalScope.setPrototype(proto, forToken: proto.id.op)
+        }
+
+        if lookahead == .LBrace {
+            self.match(.LBrace)
+            currentFunc = proto
+            if let stmt = self.sequence() {
+                self.match(.RBrace)
+                topScope = savedScope
+                proto.implemented = true
+                return Function(signature: proto, body: stmt, line: lexer.line)
+            }
+            else {
+                error("expected statement", line: lexer.line)
+            }
+        }
+        return nil
     }
 
     func prototype() -> Prototype {
@@ -573,5 +592,5 @@ extension Parser {
 }
 
 @noreturn func error(err: String, line: UInt) {
-    fatalError("\(err) near line \(line)")
+    fatalError("error near line \(line): \(err)")
 }

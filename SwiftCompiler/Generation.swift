@@ -37,6 +37,9 @@ class Generator {
             self.appendInstruction("\(type.LLVMString()) = \(type.LLVMLongString())")
         }
         for function in program.funcs {
+            if !function.signature.implemented {
+                error("function \(function.signature) declared on line \(function.signature.id.line) is never defined", line: function.signature.id.line)
+            }
             function.generateLLVMWithGenerator(self)
         }
     }

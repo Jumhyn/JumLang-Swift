@@ -205,7 +205,7 @@ class AggregateType: NamedType {
     }
 
     override func LLVMLongString() -> String {
-        var typeString = "{ \(members[0].type.LLVMString())"
+        var typeString = "type { \(members[0].type.LLVMString())"
         for member in members[1..<members.count] {
             typeString += ", \(member.type.LLVMString())"
         }

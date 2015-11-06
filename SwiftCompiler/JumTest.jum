@@ -1,14 +1,17 @@
-[int timesTwo: int x] {
-    return 2 * x;
-}
-
 [struct test:
     int x,
     int y
 ]
 
+[int timesTwo: int x]
+
 [int main] {
     char[] str = "test";
     char x = str[0];
+    int y = [timesTwo: 3];
     return 0;
+}
+
+[int timesTwo: int x] {
+    return 2 * x;
 }

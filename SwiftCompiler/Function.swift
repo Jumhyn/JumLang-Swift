@@ -11,6 +11,7 @@ import Foundation
 class Prototype : Node {
     var id: Identifier
     var args: [Identifier]
+    var implemented = false
 
     init(id: Identifier, args: [Identifier], line: UInt) {
         self.id = id
