@@ -1,5 +1,10 @@
+[struct twoBools:
+    bool a,
+    bool b
+]
+
 [struct test:
-    int a,
+    twoBools x,
     int c
 ]
 
@@ -7,10 +12,9 @@
 
 [int main] {
     char[] str = "test";
-    char x = str[0];
     int y = [timesTwo: 3];
     test z;
-    z[a] = 0;
+    z[x][a] = true;
     z[c] = 3;
     return z[c];
 }

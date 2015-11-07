@@ -272,6 +272,9 @@ class Constant: Expression {
 
     override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
         if to != type {
+            if to.numeric != type.numeric {
+                error("cannot convert \(type) to \(to)", line: line)
+            }
             type = to
             if to == TypeBase.charType() {
                 switch op {

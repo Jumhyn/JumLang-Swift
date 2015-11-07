@@ -514,19 +514,15 @@ extension Parser {
         let idTok = lookahead
         if var id = topScope.identifierForToken(idTok) {
             self.match(.Identifier(nil))
-            var exprStack: [Expression] = []
-            while lookahead == .LBrack {
-                self.match(.LBrack)
-                let expr = self.orExpression()
-                exprStack.append(expr)
-                self.match(.RBrack)
-            }
-            while exprStack.count > 0 {
-                if id.type is ArrayType {
-                    id = ArrayAccess(indexExpr: exprStack.removeLast(), arrayId: id, line: lexer.line)
-                }
-                else {
-                    id = MemberAccess(member: exprStack.removeFirst(), parent: id, line: lexer.line)
+            if lookahead == .LBrack {
+                let exprs: [Expression] = self.accesses(id)
+                for expr in exprs {
+                    if id.type is ArrayType {
+                        id = ArrayAccess(indexExpr: expr, arrayId: id, line: lexer.line)
+                    }
+                    else {
+                        id = MemberAccess(member: expr, parent: id, line: lexer.line)
+                    }
                 }
             }
             return id
@@ -534,6 +530,36 @@ extension Parser {
         else {
             error("use of undecalred identifier \(idTok)", line: lexer.line)
         }
+    }
+
+    func accesses(id: Identifier) -> [Expression] {
+        var type = id.type
+        var exprs: [Expression] = []
+        while lookahead == .LBrack {
+            var indexExprs: [Expression] = []
+            while let arr = type as? ArrayType where lookahead == .LBrack {
+                self.match(.LBrack)
+                let expr = self.orExpression()
+                indexExprs.append(expr)
+                type = arr.to
+                self.match(.RBrack)
+            }
+            exprs.appendContentsOf(indexExprs.reverse())
+            while let agg = type as? AggregateType where lookahead == .LBrack {
+                self.match(.LBrack)
+                let idTok = lookahead
+                self.match(.Identifier(nil))
+                if let member = agg.getMemberWithName(idTok) {
+                    exprs.append(member)
+                    type = member.type
+                    self.match(.RBrack)
+                }
+                else {
+                    error("no member \(idTok) found in type \(type)", line: lexer.line)
+                }
+            }
+        }
+        return exprs
     }
 
     func constantExpression() -> Constant {
