@@ -9,7 +9,7 @@
 import Foundation
 
 class Statement: Node {
-    func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+    func generateLLVM(with gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         
     }
 
@@ -43,17 +43,17 @@ class Sequence: Statement {
         super.init(line: line)
     }
 
-    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+    override func generateLLVM(with gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         if let stmt2 = stmt2 {
             let between = gen.reserveLabel()
-            stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: between)
+            stmt1.generateLLVM(with: gen, beforeLabel: before, afterLabel: between)
             if stmt1.needsAfterLabel() || stmt2.needsBeforeLabel() {
-                gen.appendLabel(between)
+                gen.append(between)
             }
-            stmt2.generateLLVMWithGenerator(gen, beforeLabel: between, afterLabel: after)
+            stmt2.generateLLVM(with: gen, beforeLabel: between, afterLabel: after)
         }
         else {
-            stmt1.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
+            stmt1.generateLLVM(with: gen, beforeLabel: before, afterLabel: after)
         }
     }
 
@@ -79,9 +79,9 @@ class Assignment: Statement {
         super.init(line: line)
     }
 
-    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        let reduced = expr.convertTo(id.type, withGenerator: gen)
-        gen.appendInstruction("store \(reduced.type) \(reduced), \(id.type)* \(id.getPointerWithGenerator(gen))")
+    override func generateLLVM(with gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        let reduced = expr.convert(to: id.type, with: gen)
+        gen.append("store \(reduced.type) \(reduced), \(id.type)* \(id.getPointer(with: gen))")
     }
 }
 
@@ -100,13 +100,13 @@ class Return: Statement {
         super.init(line: line)
     }
 
-    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+    override func generateLLVM(with gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
         if let expr = expr {
-            let reduced = expr.convertTo(from.id.type, withGenerator: gen)
-            gen.appendInstruction("ret \(reduced.type) \(reduced)")
+            let reduced = expr.convert(to: from.id.type, with: gen)
+            gen.append("ret \(reduced.type) \(reduced)")
         }
         else {
-            gen.appendInstruction("ret void")
+            gen.append("ret void")
         }
     }
 }
@@ -119,7 +119,7 @@ class Expratement: Statement {
         super.init(line: line)
     }
 
-    override func generateLLVMWithGenerator(gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
-        expr.reduceWithGenerator(gen)
+    override func generateLLVM(with gen: Generator, beforeLabel before: Label, afterLabel after: Label) {
+        _ = expr.reduce(with: gen)
     }
 }

@@ -30,31 +30,31 @@ class Function : Node {
         super.init(line: line)
     }
 
-    override func generateLLVMWithGenerator(gen: Generator) {
+    override func generateLLVM(with gen: Generator) {
         var signatureString = "define \(signature.id.type) \(signature.id) ("
         for arg in signature.args {
             signatureString += "\(arg.type) %\(arg.op)"
-            if signature.args.indexOf(arg) < signature.args.count-1 {
+            if signature.args.index(of: arg)! < signature.args.count-1 {
                 signatureString += ","
             }
         }
         signatureString += ") {"
-        gen.appendInstruction(signatureString)
+        gen.append(signatureString)
 
         for arg in signature.args {
-            gen.appendInstruction("\(arg) = alloca \(arg.type)")
-            gen.appendInstruction("store \(arg.type) %\(arg.op), \(arg.type)* \(arg)")
+            gen.append("\(arg) = alloca \(arg.type)")
+            gen.append("store \(arg.type) %\(arg.op), \(arg.type)* \(arg)")
             arg.allocated = true
         }
 
         let before = gen.reserveLabel(), after = gen.reserveLabel()
         if body.needsBeforeLabel() {
-            gen.appendLabel(before)
+            gen.append(before)
         }
-        body.generateLLVMWithGenerator(gen, beforeLabel: before, afterLabel: after)
+        body.generateLLVM(with: gen, beforeLabel: before, afterLabel: after)
         if body.needsAfterLabel() {
-            gen.appendLabel(after)
+            gen.append(after)
         }
-        gen.appendInstruction("}")
+        gen.append("}")
     }
 }

@@ -14,9 +14,9 @@ var parser = Parser(lexer: lex)
 var funcs = parser.program()
 
 var gen = Generator()
-gen.generateLLVMForProgram(funcs)
+gen.generateLLVM(for: funcs)
 print(gen.output)
 
 
 
-let exitCode = system("clang ")
+//let exitCode = system("clang ")

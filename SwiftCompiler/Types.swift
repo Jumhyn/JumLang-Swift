@@ -9,6 +9,7 @@
 import Foundation
 
 class TypeBase : LLVMPrintable, Equatable {
+
     var numeric = false
     var signed = true
     var floatingPoint = false
@@ -46,18 +47,18 @@ class TypeBase : LLVMPrintable, Equatable {
         }
     }
 
-    func writeTo<Target : OutputStreamType>(inout target: Target) {
+    func write<Target : TextOutputStream>(to target: inout Target) {
         target.write(self.LLVMString())
     }
 
-    func equals(other: TypeBase) -> Bool {
+    func equals(_ other: TypeBase) -> Bool {
         return self.apparentSize == other.apparentSize
             && self.numeric == other.numeric
             && self.signed == other.signed
             && self.floatingPoint == other.floatingPoint
     }
 
-    func canConvertTo(other: TypeBase) -> Bool {
+    func canConvert(to other: TypeBase) -> Bool {
         if self == other {
             return true
         }
@@ -86,7 +87,7 @@ class NumericType : TypeBase {
         super.init(numeric: true, signed: signed, floatingPoint: floatingPoint, apparentSize: apparentSize)
     }
 
-    override func canConvertTo(other: TypeBase) -> Bool {
+    override func canConvert(to other: TypeBase) -> Bool {
         return other is NumericType || self == other
     }
 }
@@ -132,7 +133,7 @@ class PointerType : TypeBase {
         super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: 32)
     }
 
-    override func equals(other: TypeBase) -> Bool {
+    override func equals(_ other: TypeBase) -> Bool {
         if let other = other as? PointerType {
             return self.to == other.to && super.equals(other)
         }
@@ -156,10 +157,10 @@ class ArrayType : PointerType {
 
     override func defaultConstant() -> Constant {
         let defaultVal = to.defaultConstant()
-        return ArrayLiteral(values: Array<Constant>(count: Int(numElements), repeatedValue: defaultVal), line: 0)
+        return ArrayLiteral(values: Array<Constant>(repeating: defaultVal, count: Int(numElements)), line: 0)
     }
 
-    override func equals(other: TypeBase) -> Bool {
+    override func equals(_ other: TypeBase) -> Bool {
         if let other = other as? ArrayType {
             return self.numElements == other.numElements && super.equals(other)
         }
@@ -200,16 +201,16 @@ class AggregateType: NamedType {
         super.init(numeric: false, signed: false, floatingPoint: false, apparentSize: sum, name: name, line: line)
     }
 
-    func getMemberIndex(member: Expression) -> Int? {
+    func getIndex(of member: Expression) -> Int? {
         if let id = member as? Identifier {
-            return members.indexOf(id)
+            return members.index(of: id)
         }
         else {
             error("member access must be identifier", line: self.line)
         }
     }
 
-    func getMemberWithName(name: Token) -> Identifier? {
+    func getMember(withName name: Token) -> Identifier? {
         for member in members {
             if member.op == name {
                 return member
@@ -232,7 +233,7 @@ func ==(lhs: TypeBase, rhs: TypeBase) -> Bool {
     return lhs.equals(rhs)
 }
 
-func Type_max(type1: TypeBase, type2: TypeBase) -> TypeBase {
+func Type_max(_ type1: TypeBase, _ type2: TypeBase) -> TypeBase {
     if (type1 == TypeBase.floatType() || type2 == TypeBase.floatType()) {
         return TypeBase.floatType();
     }

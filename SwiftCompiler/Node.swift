@@ -8,6 +8,10 @@
 
 import Foundation
 
+protocol LLVMPrintable: TextOutputStreamable {
+    func LLVMString() -> String
+}
+
 class Node {
     var line: UInt
 
@@ -15,11 +19,7 @@ class Node {
         self.line = line
     }
 
-    func generateLLVMWithGenerator(gen: Generator) {
+    func generateLLVM(with gen: Generator) {
 
     }
-}
-
-protocol LLVMPrintable: Streamable {
-    func LLVMString() -> String
 }

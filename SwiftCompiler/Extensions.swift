@@ -9,7 +9,7 @@
 import Foundation
 
 extension UInt {
-    func times(block : () -> ()) {
+    func times(_ block : () -> ()) {
         for _ in 0..<self {
             block()
         }
@@ -35,36 +35,30 @@ extension String {
 }
 
 extension String {
-    mutating func extendLn(other: String) {
-        self += other
+    mutating func append(line: String) {
+        self += line
         let newLine: Character = "\n"
         self.append(newLine)
-    }
-}
-
-extension Character : BooleanType {
-    public var boolValue: Bool {
-        return self != "\0"
     }
 }
 
 extension Character {
     init(_ value: Int) {
         let scalar = UnicodeScalar(value)
-        self.init(scalar)
+        self.init(scalar!)
     }
 
     func isSpace() -> Bool {
-        let set = NSCharacterSet.whitespaceAndNewlineCharacterSet()
-        return set.characterIsMember(String(self).utf16[String.UTF16Index(_offset: 0)])
+        let set = CharacterSet.whitespacesAndNewlines
+        return String(self).rangeOfCharacter(from: set) != nil
     }
     func isDigit() -> Bool {
-        let set = NSCharacterSet.decimalDigitCharacterSet()
-        return set.characterIsMember(String(self).utf16[String.UTF16Index(_offset: 0)])
+        let set = CharacterSet.decimalDigits
+        return String(self).rangeOfCharacter(from: set) != nil
     }
     func isAlpha() -> Bool {
-        let set = NSCharacterSet.letterCharacterSet()
-        return set.characterIsMember(String(self).utf16[String.UTF16Index(_offset: 0)])
+        let set = CharacterSet.letters
+        return String(self).rangeOfCharacter(from: set) != nil
     }
 
     func toInt() -> Int? {

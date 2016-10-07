@@ -9,192 +9,183 @@
 import Foundation
 
 enum Token {
-    case Any
+    case plus, minus, times, divide
+    case less, lEqual, equal, gEqual, greater
+    case not, nEqual
+    case assign
+    case and, or
+    case lBrace, rBrace
+    case lParen, rParen
+    case lBrack, rBrack
+    case colon, semi, comma, dot
 
-    case Plus, Minus, Times, Divide
-    case Less, LEqual, Equal, GEqual, Greater
-    case Not, NEqual
-    case Assign
-    case And, Or
-    case LBrace, RBrace
-    case LParen, RParen
-    case LBrack, RBrack
-    case Colon, Semi, Comma, Dot
+    case `if`, `else`, `while`, `do`, `break`, `return`, `struct`
 
-    case If, Else, While, Do, Break, Return, Struct
+    case temp
 
-    case Temp
+    case identifier(String)
+    case boolean(Bool)
+    case integer(Int)
+    case decimal(Double)
+    case stringLiteral(String)
+    case typeName(TypeBase)
 
-    //associated values are optional types so that
-    //(for example) .Identifier(nil) will match *any*
-    //.Identifier token
-    case Identifier(String?)
-    case Boolean(Bool?)
-    case Integer(Int?)
-    case Decimal(Double?)
-    case StringLiteral(String?)
-    case Type(TypeBase?)
+    case array, index
 
-    case Array, Index
-
-    case Unknown
+    case unknown
 
     init(_ value: String) {
         switch value {
         case "+":
-            self = .Plus
+            self = .plus
         case "-":
-            self = .Minus
+            self = .minus
         case "*":
-            self = .Times
+            self = .times
         case "/":
-            self = .Divide
+            self = .divide
         case "<":
-            self = .Less
+            self = .less
         case "<=":
-            self = .LEqual
+            self = .lEqual
         case "==":
-            self = .Equal
+            self = .equal
         case ">=":
-            self = .GEqual
+            self = .gEqual
         case ">":
-            self = .Greater
+            self = .greater
         case "!":
-            self = .Not
+            self = .not
         case "!=":
-            self = .NEqual
+            self = .nEqual
         case "=":
-            self = .Assign
+            self = .assign
         case "&&":
-            self = .And
+            self = .and
         case "||":
-            self = .Or
+            self = .or
         case "{":
-            self = .LBrace
+            self = .lBrace
         case "}":
-            self = .RBrace
+            self = .rBrace
         case "(":
-            self = .LParen
+            self = .lParen
         case ")":
-            self = .RParen
+            self = .rParen
         case "[":
-            self = .LBrack
+            self = .lBrack
         case "]":
-            self = .RBrack
+            self = .rBrack
         case ":":
-            self = .Colon
+            self = .colon
         case ";":
-            self = .Semi
+            self = .semi
         case ",":
-            self = .Comma
+            self = .comma
         case ".":
-            self = .Dot
-
+            self = .dot
         default:
-            self = .Unknown
+            self = .unknown
         }
     }
 
-    init (_ value: Character) {
+    init(_ value: Character) {
         self.init(String(value))
     }
 }
 
-extension Token : CustomStringConvertible, Streamable {
+extension Token : CustomStringConvertible, TextOutputStreamable {
     var description: String {
         switch self {
-        case .Any:
-            return "wildcard"
-
-        case .Plus:
+        case .plus:
             return "+"
-        case .Minus:
+        case .minus:
             return "-"
-        case .Times:
+        case .times:
             return "*"
-        case .Divide:
+        case .divide:
             return "/"
-        case .Less:
+        case .less:
             return "<"
-        case .LEqual:
+        case .lEqual:
             return "<="
-        case .Equal:
+        case .equal:
             return "=="
-        case .GEqual:
+        case .gEqual:
             return ">="
-        case .Greater:
+        case .greater:
             return ">"
-        case .Not:
+        case .not:
             return "!"
-        case .NEqual:
+        case .nEqual:
             return "!="
-        case .Assign:
+        case .assign:
             return "="
-        case .And:
+        case .and:
             return "&&"
-        case .Or:
+        case .or:
             return "||"
-        case .LBrace:
+        case .lBrace:
             return "{"
-        case .RBrace:
+        case .rBrace:
             return "}"
-        case .LParen:
+        case .lParen:
             return "("
-        case .RParen:
+        case .rParen:
             return ")"
-        case .LBrack:
+        case .lBrack:
             return "["
-        case .RBrack:
+        case .rBrack:
             return "]"
-        case .Colon:
+        case .colon:
             return ":"
-        case .Semi:
+        case .semi:
             return ";"
-        case .Comma:
+        case .comma:
             return ","
-        case .Dot:
+        case .dot:
             return "."
 
-        case .If:
+        case .if:
             return "if"
-        case .Else:
+        case .else:
             return "else"
-        case .While:
+        case .while:
             return "while"
-        case .Do:
+        case .do:
             return "do"
-        case .Break:
+        case .break:
             return "break"
-        case .Return:
+        case .return:
             return "return"
-        case .Struct:
+        case .struct:
             return "struct"
 
-        case .Temp:
+        case .temp:
             return "t"
 
-        case .Identifier(_):
+        case .identifier(_):
             return "identifier"
-        case .Boolean(_):
+        case .boolean(_):
             return "boolean constant"
-        case .Integer(_):
+        case .integer(_):
             return "integer constant"
-        case .Decimal(_):
+        case .decimal(_):
             return "floating point constant"
-        case .StringLiteral(_):
+        case .stringLiteral(_):
             return "string literal"
-        case .Type(_):
+        case .typeName(_):
             return "type"
             
-        case .Array, .Index:
+        case .array, .index:
             return "array/index operator"
             
-        case .Unknown:
+        case .unknown:
             return "unknown token"
         }
     }
 
-    func writeTo<Target : OutputStreamType>(inout target: Target) {
+    func write<Target : TextOutputStream>(to target: inout Target) {
         target.write(self.LLVMString())
     }
 }
@@ -208,40 +199,40 @@ extension Token : Hashable {
 extension Token : LLVMPrintable {
     func LLVMString() -> String {
         switch self {
-        case .Plus:
+        case .plus:
             return "add"
-        case .Minus:
+        case .minus:
             return "sub"
-        case .Times:
+        case .times:
             return "mul"
-        case .Divide:
+        case .divide:
             return "div"
 
-        case .Equal:
+        case .equal:
             return "eq"
-        case .NEqual:
+        case .nEqual:
             return "ne"
-        case .Less:
+        case .less:
             return "lt"
-        case .LEqual:
+        case .lEqual:
             return "le"
-        case .GEqual:
+        case .gEqual:
             return "ge"
-        case .Greater:
+        case .greater:
             return "gt"
 
-        case .Identifier(let id):
-            return id ?? "identifier"
-        case .Boolean(let bool):
-            return bool?.description ?? "boolean"
-        case .Integer(let int):
-            return int?.description ?? "integer literal"
-        case .Decimal(let dec):
-            return dec?.description ?? "floating point literal"
-        case .StringLiteral(let str):
-            return str ?? "string literal"
-        case .Type(let type):
-            return type?.LLVMString() ?? "type expression"
+        case .identifier(let id):
+            return id
+        case .boolean(let bool):
+            return bool.description
+        case .integer(let int):
+            return int.description
+        case .decimal(let dec):
+            return dec.description
+        case .stringLiteral(let str):
+            return str
+        case .typeName(let type):
+            return type.LLVMString()
 
         default:
             return self.description
@@ -250,243 +241,123 @@ extension Token : LLVMPrintable {
 }
 
 func ==(lhs: Token, rhs: Token) -> Bool {
-    switch lhs {
-    case .Plus:
-        switch rhs {
-        case .Plus: return true
-        default: return false
-        }
-    case .Minus:
-        switch rhs {
-        case .Minus: return true
-        default: return false
-        }
-    case .Times:
-        switch rhs {
-        case .Times: return true
-        default: return false
-        }
-    case .Divide:
-        switch rhs {
-        case .Divide: return true
-        default: return false
-        }
+    switch (lhs, rhs) {
+    case (.plus, .plus): return true
+    case (.minus, .minus): return true
+    case (.times, .times): return true
+    case (.divide, .divide): return true
+    case (.less, .less): return true
+    case (.lEqual, .lEqual): return true
+    case (.equal, .equal): return true
+    case (.gEqual, .gEqual): return true
+    case (.greater, .greater): return true
+    case (.not, .not): return true
+    case (.nEqual, .nEqual): return true
+    case (.assign, .assign): return true
+    case (.and, .and): return true
+    case (.or, .or): return true
+    case (.lBrace, .lBrace): return true
+    case (.rBrace, .rBrace): return true
+    case (.lParen, .lParen): return true
+    case (.rParen, .rParen): return true
+    case (.lBrack, .lBrack): return true
+    case (.rBrack, .rBrack): return true
+    case (.colon, .colon): return true
+    case (.semi, .semi): return true
+    case (.comma, .comma): return true
+    case (.dot, .dot): return true
+    case (.if, .if): return true
+    case (.else, .else): return true
+    case (.while, .while): return true
+    case (.do, .do): return true
+    case (.break, .break): return true
+    case (.return, .return): return true
+    case (.struct, .struct): return true
 
-    case .Less:
-        switch rhs {
-        case .Less: return true
-        default: return false
-        }
-    case .LEqual:
-        switch rhs {
-        case .LEqual: return true
-        default: return false
-        }
-    case .Equal:
-        switch rhs {
-        case .Equal: return true
-        default: return false
-        }
-    case .GEqual:
-        switch rhs {
-        case .GEqual: return true
-        default: return false
-        }
-    case .Greater:
-        switch rhs {
-        case .Greater: return true
-        default: return false
-        }
+    case (.identifier(let lhs), .identifier(let rhs)):
+        return lhs == rhs
+    case (.boolean(let lhs), .boolean(let rhs)):
+        return lhs == rhs
+    case (.integer(let lhs), .integer(let rhs)):
+        return lhs == rhs
+    case (.decimal(let lhs), .decimal(let rhs)):
+        return lhs == rhs
+    case (.stringLiteral(let lhs), .stringLiteral(let rhs)):
+        return lhs == rhs
+    case (.typeName(let lhs), .typeName(let rhs)):
+        return lhs == rhs
 
-    case .Not:
-        switch rhs {
-        case .Not: return true
-        default: return false
-        }
-    case .NEqual:
-        switch rhs {
-        case .NEqual: return true
-        default: return false
-        }
+    case (.array,  .array): return true
+    case (.index, .index): return true
 
-    case .Assign:
-        switch rhs {
-        case .Assign: return true
-        default: return false
-        }
+    default: return false
+    }
+}
 
-    case .And:
-        switch rhs {
-        case .And: return true
-        default: return false
-        }
-    case .Or:
-        switch rhs {
-        case .Or: return true
-        default: return false
-        }
-
-    case .LBrace:
-        switch rhs {
-        case .LBrace: return true
-        default: return false
-        }
-    case .RBrace:
-        switch rhs {
-        case .RBrace: return true
-        default: return false
-        }
-    case .LParen:
-        switch rhs {
-        case .LParen: return true
-        default: return false
-        }
-    case .RParen:
-        switch rhs {
-        case .RParen: return true
-        default: return false
-        }
-    case .LBrack:
-        switch rhs {
-        case .LBrack: return true
-        default: return false
-        }
-    case .RBrack:
-        switch rhs {
-        case .RBrack: return true
-        default: return false
-        }
-
-    case .Colon:
-        switch rhs {
-        case .Colon: return true
-        default: return false
-        }
-    case .Semi:
-        switch rhs {
-        case .Semi: return true
-        default: return false
-        }
-    case .Comma:
-        switch rhs {
-        case .Comma: return true
-        default: return false
-        }
-    case .Dot:
-        switch rhs {
-        case .Dot: return true
-        default: return false
-        }
-
-    case .If:
-        switch rhs {
-        case .If: return true
-        default: return false
-        }
-    case .Else:
-        switch rhs {
-        case .Else: return true
-        default: return false
-        }
-    case .While:
-        switch rhs {
-        case .While: return true
-        default: return false
-        }
-    case .Do:
-        switch rhs {
-        case .Do: return true
-        default: return false
-        }
-    case .Break:
-        switch rhs {
-        case .Break: return true
-        default: return false
-        }
-    case .Return:
-        switch rhs {
-        case .Return: return true
-        default: return false
-        }
-    case .Struct:
-        switch rhs {
-        case .Struct: return true
-        default: return false
-        }
-
-    case let .Identifier(lid):
-        switch rhs {
-        case let .Identifier(rid):
-            if (lid == nil || rid == nil) {
+extension Token {
+    static var anyIdentifier: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .identifier(_):
                 return true
+            default:
+                return false
             }
-            return lid == rid
-        default: return false
         }
-    case let .Boolean(lbool):
-        switch rhs {
-        case let .Boolean(rbool):
-            if (lbool == nil || rbool == nil) {
-                return true
-            }
-            return lbool == rbool
-        default: return false
-        }
-    case let .Integer(lint):
-        switch rhs {
-        case let .Integer(rint):
-            if (lint == nil || rint == nil) {
-                return true
-            }
-            return lint == rint
-        default: return false
-        }
-    case let .Decimal(ldouble):
-        switch rhs {
-        case let .Decimal(rdouble):
-            if (ldouble == nil || rdouble == nil) {
-                return true
-            }
-            return ldouble == rdouble
-        default: return false
-        }
-    case let .StringLiteral(lstr):
-        switch rhs {
-        case let .StringLiteral(rstr):
-            if (lstr == nil || rstr == nil) {
-                return true
-            }
-            return lstr == rstr
-        default: return false
-        }
-    case let .Type(ltype):
-        switch rhs {
-        case let .Type(rtype):
-            if (ltype == nil || rtype == nil) {
-                return true
-            }
-            return rtype == ltype
-        default: return false
-        }
+    }
 
-    case .Array:
-        switch rhs {
-        case .Array: return true
-        default: return false
+    static var anyBoolean: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .boolean(_):
+                return true
+            default:
+                return false
+            }
         }
-    case .Index:
-        switch rhs {
-        case .Index: return true
-        default: return false
-        }
+    }
 
-    case .Any:
-        switch rhs {
-        case .Any: return true
-        default: return false
+    static var anyInteger: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .integer(_):
+                return true
+            default:
+                return false
+            }
         }
-        
-    default:
-        return false
+    }
+
+    static var anyDecimal: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .decimal(_):
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    static var anyStringLiteral: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .stringLiteral(_):
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    static var anyTypeName: (_ tok: Token) -> Bool {
+        return {
+            switch ($0) {
+            case .typeName(_):
+                return true
+            default:
+                return false
+            }
+        }
     }
 }

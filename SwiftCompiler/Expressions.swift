@@ -27,17 +27,17 @@ class Expression: Node, CustomStringConvertible {
         return self
     }
 
-    func reduceWithGenerator(gen: Generator) -> Expression {
+    func reduce(with gen: Generator) -> Expression {
         return self
     }
 
-    func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
-        let reduced = self.reduceWithGenerator(gen)
+    func convert(to: TypeBase, with gen: Generator) -> Expression {
+        let reduced = self.reduce(with: gen)
         if type == to {
             return reduced
         }
         else {
-            let temp = gen.getTemporaryOfType(to)
+            let temp = gen.getTemporary(of: to)
             var opString = ""
             if to.floatingPoint {
                 if type.numeric && !type.floatingPoint {
@@ -58,7 +58,7 @@ class Expression: Node, CustomStringConvertible {
             if opString == "" {
                 error("can't convert \(type) to \(to)", line: line)
             }
-            gen.appendInstruction("\(temp) = \(opString) \(type) \(reduced) to \(to)")
+            gen.append("\(temp) = \(opString) \(type) \(reduced) to \(to)")
             return temp
         }
     }
@@ -68,10 +68,10 @@ class Expression: Node, CustomStringConvertible {
     }
 }
 
-extension Expression: Streamable {
+extension Expression: TextOutputStreamable {
     //TODO: Move 'description' getter to this extension
 
-    func writeTo<Target : OutputStreamType>(inout target: Target) {
+    func write<Target : TextOutputStream>(to target: inout Target) {
         target.write(self.LLVMString())
     }
 }
@@ -81,7 +81,7 @@ class Temporary: Identifier {
 
     init(number: UInt, type: TypeBase, line: UInt) {
         self.number = number
-        super.init(op: .Temp, type: type, line: line)
+        super.init(op: .temp, type: type, line: line)
         self.allocated = true
     }
 
@@ -126,15 +126,15 @@ class Identifier: Expression, Equatable {
         return "\(prefix)\(op)\(postfix)"
     }
 
-    override func reduceWithGenerator(gen: Generator) -> Expression {
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = load \(type)* \(self)")
+    override func reduce(with gen: Generator) -> Expression {
+        let temp = gen.getTemporary(of: type)
+        gen.append("\(temp) = load \(type)* \(self)")
         return temp
     }
 
-    func getPointerWithGenerator(gen: Generator) -> Expression {
+    func getPointer(with gen: Generator) -> Expression {
         if !allocated {
-            gen.appendInstruction("\(self) = alloca \(self.type)")
+            gen.append("\(self) = alloca \(self.type)")
             allocated = true
         }
         return self
@@ -148,7 +148,7 @@ class MemberAccess: Identifier {
     init(member: Expression, parent: Identifier, line: UInt) {
         if let type = parent.type as? AggregateType {
             self.parent = parent
-            if let actualMember = type.getMemberWithName(member.op), index = type.getMemberIndex(actualMember) {
+            if let actualMember = type.getMember(withName: member.op), let index = type.getIndex(of: actualMember) {
                  self.index = UInt(index)
             }
             else {
@@ -161,17 +161,17 @@ class MemberAccess: Identifier {
         super.init(op: parent.op, type: member.type, line: line)
     }
 
-    override func reduceWithGenerator(gen: Generator) -> Expression {
-        let ptr = getPointerWithGenerator(gen)
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = load \(type)* \(ptr)");
+    override func reduce(with gen: Generator) -> Expression {
+        let ptr = getPointer(with: gen)
+        let temp = gen.getTemporary(of: type)
+        gen.append("\(temp) = load \(type)* \(ptr)");
         return temp
     }
 
-    override func getPointerWithGenerator(gen: Generator) -> Expression {
-        let parentPtr = parent.getPointerWithGenerator(gen)
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = getelementptr \(parentPtr.type)* \(parentPtr), i32 0, i32 \(self.index)")
+    override func getPointer(with gen: Generator) -> Expression {
+        let parentPtr = parent.getPointer(with: gen)
+        let temp = gen.getTemporary(of: type)
+        gen.append("\(temp) = getelementptr \(parentPtr.type)* \(parentPtr), i32 0, i32 \(self.index)")
         return temp;
     }
 }
@@ -192,18 +192,18 @@ class ArrayAccess: Identifier {
         super.init(op: arrayId.op, type: (arrayId.type as! ArrayType).to, line: line)
     }
 
-    override func reduceWithGenerator(gen: Generator) -> Expression {
-        let ptr = getPointerWithGenerator(gen)
-        let temp2 = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp2) = load \(type)* \(ptr)")
+    override func reduce(with gen: Generator) -> Expression {
+        let ptr = getPointer(with: gen)
+        let temp2 = gen.getTemporary(of: type)
+        gen.append("\(temp2) = load \(type)* \(ptr)")
         return temp2
     }
 
-    override func getPointerWithGenerator(gen: Generator) -> Expression {
-        let ptr = arrayId.getPointerWithGenerator(gen)
-        let index = indexExpr.reduceWithGenerator(gen)
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = getelementptr \(ptr.type)* \(ptr), i32 0, i32 \(index)")
+    override func getPointer(with gen: Generator) -> Expression {
+        let ptr = arrayId.getPointer(with: gen)
+        let index = indexExpr.reduce(with: gen)
+        let temp = gen.getTemporary(of: type)
+        gen.append("\(temp) = getelementptr \(ptr.type)* \(ptr), i32 0, i32 \(index)")
         return temp
     }
 }
@@ -218,7 +218,7 @@ class Arithmetic: Operator {
 
     override func LLVMString() -> String {
         var prefix = ""
-        if self.op == .Divide {
+        if self.op == .divide {
             prefix = "s"
         }
         else if self.type == TypeBase.floatType() {
@@ -231,15 +231,15 @@ class Arithmetic: Operator {
     init(op: Token, expr1: Expression, expr2: Expression, line: UInt) {
         self.expr1 = expr1
         self.expr2 = expr2
-        super.init(op: op, type: Type_max(expr1.type, type2: expr2.type), line: line)
+        super.init(op: op, type: Type_max(expr1.type, expr2.type), line: line)
     }
 
-    override func reduceWithGenerator(gen: Generator) -> Expression {
-        let reduced1 = expr1.reduceWithGenerator(gen)
-        let reduced2 = expr2.reduceWithGenerator(gen)
-        let temp = gen.getTemporaryOfType(type)
+    override func reduce(with gen: Generator) -> Expression {
+        let reduced1 = expr1.reduce(with: gen)
+        let reduced2 = expr2.reduce(with: gen)
+        let temp = gen.getTemporary(of: type)
         let result = Arithmetic(op: op, expr1: reduced1, expr2: reduced2, line: line)
-        gen.appendInstruction("\(temp) = \(result)")
+        gen.append("\(temp) = \(result)")
         return temp
     }
 }
@@ -255,7 +255,7 @@ class Unary: Operator {
 
 class Constant: Expression {
     init(intVal val: Int, line: UInt) {
-        super.init(op: .Integer(val), type: TypeBase.intType(), line: line)
+        super.init(op: .integer(val), type: TypeBase.intType(), line: line)
         //FIXME: CHAR_MIN??
         if /*val >= Int(CHAR_MIN) && */val <= Int(CHAR_MAX) {
             type = TypeBase.charType()
@@ -263,14 +263,14 @@ class Constant: Expression {
     }
 
     init(floatVal val: Double, line: UInt) {
-        super.init(op: .Decimal(val), type: TypeBase.floatType(), line: line)
+        super.init(op: .decimal(val), type: TypeBase.floatType(), line: line)
     }
 
     override init(op: Token, type: TypeBase, line: UInt) {
         super.init(op: op, type: type, line: line)
     }
 
-    override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
+    override func convert(to: TypeBase, with gen: Generator) -> Expression {
         if to != type {
             if to.numeric != type.numeric {
                 error("cannot convert \(type) to \(to)", line: line)
@@ -278,30 +278,30 @@ class Constant: Expression {
             type = to
             if to == TypeBase.charType() {
                 switch op {
-                case .Integer(let val):
-                    op = .Integer(Int(Int8(val!)))
-                case .Decimal(let val):
-                    op = .Integer(Int(Int8(val!)))
+                case .integer(let val):
+                    op = .integer(Int(Int8(val)))
+                case .decimal(let val):
+                    op = .integer(Int(Int8(val)))
                 default:
-                    return super.convertTo(to, withGenerator: gen)
+                    return super.convert(to: to, with: gen)
                 }
             }
             else if to == TypeBase.intType() {
                 switch op {
-                case .Integer(_):
+                case .integer(_):
                     break
-                case .Decimal(let val):
-                    op = .Integer(Int(val!))
+                case .decimal(let val):
+                    op = .integer(Int(val))
                 default:
-                    return super.convertTo(to, withGenerator: gen)
+                    return super.convert(to: to, with: gen)
                 }
             }
             else if to == TypeBase.floatType() {
                 switch op {
-                case .Integer(let val):
-                    op = .Decimal(Double(val!))
+                case .integer(let val):
+                    op = .decimal(Double(val))
                 default:
-                    return super.convertTo(to, withGenerator: gen)
+                    return super.convert(to: to, with: gen)
                 }
             }
         }
@@ -315,13 +315,13 @@ class ArrayLiteral: Constant {
     init(values: [Constant], line: UInt) {
         self.values = values
         let elementType = values[0].type
-        super.init(op: .Unknown, type: ArrayType(numElements: UInt(values.count), to: elementType), line: line)
+        super.init(op: .unknown, type: ArrayType(numElements: UInt(values.count), to: elementType), line: line)
     }
 
-    override func convertTo(to: TypeBase, withGenerator gen: Generator) -> Expression {
+    override func convert(to: TypeBase, with gen: Generator) -> Expression {
         if let to = to as? ArrayType {
             for value in values {
-                value.convertTo(to.to, withGenerator: gen)
+                _ = value.convert(to: to.to, with: gen)
             }
             type = to
             return self
@@ -347,22 +347,22 @@ class ArrayLiteral: Constant {
 protocol Logical {
     var type: TypeBase { get }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label)
+    func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label)
 }
 
 class BooleanConstant: Constant, Logical {
     init(boolVal val: Bool, line: UInt) {
-        super.init(op: .Boolean(val), type: TypeBase.boolType(), line: line)
+        super.init(op: .boolean(val), type: TypeBase.boolType(), line: line)
     }
 
-   func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+   func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label) {
         switch op {
-        case .Boolean(let val):
-            if val! {
-                gen.appendInstruction("br label %L\(trueLabel)")
+        case .boolean(let val):
+            if val {
+                gen.append("br label %L\(trueLabel)")
             }
-            if !val! {
-                gen.appendInstruction("br label %L\(falseLabel)")
+            if !val {
+                gen.append("br label %L\(falseLabel)")
             }
         default:
             error("how did this even happen", line: line)
@@ -385,17 +385,17 @@ class And: Expression, Logical {
     }
 
     convenience init(expr1: Logical, expr2: Logical, line: UInt) {
-        self.init(op: .And, expr1: expr1, expr2: expr2, line: line)
+        self.init(op: .and, expr1: expr1, expr2: expr2, line: line)
     }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label) {
         let label = (falseLabel == 0) ? gen.reserveLabel() : falseLabel
 
-        expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: 0, falseLabel: label)
-        expr2.generateLLVMBranchesWithGenerator(gen, trueLabel: trueLabel, falseLabel: falseLabel)
+        expr1.generateLLVMBranches(with: gen, trueLabel: 0, falseLabel: label)
+        expr2.generateLLVMBranches(with: gen, trueLabel: trueLabel, falseLabel: falseLabel)
 
         if falseLabel == 0 {
-            gen.appendLabel(label)
+            gen.append(label)
         }
     }
 }
@@ -415,17 +415,17 @@ class Or: Expression, Logical {
     }
 
     convenience init(expr1: Logical, expr2: Logical, line: UInt) {
-        self.init(op: .Or, expr1: expr1, expr2: expr2, line: line)
+        self.init(op: .or, expr1: expr1, expr2: expr2, line: line)
     }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
+    func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label) {
         let label = (trueLabel == 0) ? gen.reserveLabel() : trueLabel
 
-        expr1.generateLLVMBranchesWithGenerator(gen, trueLabel: label, falseLabel: 0)
-        expr2.generateLLVMBranchesWithGenerator(gen, trueLabel: trueLabel, falseLabel: falseLabel)
+        expr1.generateLLVMBranches(with: gen, trueLabel: label, falseLabel: 0)
+        expr2.generateLLVMBranches(with: gen, trueLabel: trueLabel, falseLabel: falseLabel)
 
         if trueLabel == 0 {
-            gen.appendLabel(label)
+            gen.append(label)
         }
     }
 }
@@ -438,8 +438,8 @@ class Not: Expression, Logical {
         super.init(op: op, type: TypeBase.boolType(), line: line)
     }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
-        expr.generateLLVMBranchesWithGenerator(gen, trueLabel: falseLabel, falseLabel: trueLabel)
+    func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label) {
+        expr.generateLLVMBranches(with: gen, trueLabel: falseLabel, falseLabel: trueLabel)
     }
 }
 
@@ -457,10 +457,10 @@ class Relation: Expression, Logical {
         }
     }
 
-    func generateLLVMBranchesWithGenerator(gen: Generator, trueLabel: Label, falseLabel: Label) {
-        let maxType = Type_max(expr1.type, type2: expr2.type)
-        let reduced1 = expr1.convertTo(maxType, withGenerator: gen)
-        let reduced2 = expr2.convertTo(maxType, withGenerator: gen)
+    func generateLLVMBranches(with gen: Generator, trueLabel: Label, falseLabel: Label) {
+        let maxType = Type_max(expr1.type, expr2.type)
+        let reduced1 = expr1.convert(to: maxType, with: gen)
+        let reduced2 = expr2.convert(to: maxType, with: gen)
 
         var cmpPrefix = "i"
         if maxType == TypeBase.floatType() {
@@ -468,17 +468,17 @@ class Relation: Expression, Logical {
         }
 
         var testPrefix = "s"
-        if op == .Equal || op == .NEqual {
+        if op == .equal || op == .nEqual {
             testPrefix = ""
         }
         if maxType == TypeBase.floatType() {
             testPrefix = "o"
         }
 
-        let temp = gen.getTemporaryOfType(TypeBase.boolType())
-        gen.appendInstruction("\(temp) = \(cmpPrefix)cmp \(testPrefix)\(op) \(maxType) \(reduced1), \(reduced2)")
+        let temp = gen.getTemporary(of: TypeBase.boolType())
+        gen.append("\(temp) = \(cmpPrefix)cmp \(testPrefix)\(op) \(maxType) \(reduced1), \(reduced2)")
         if trueLabel != 0 && falseLabel != 0 {
-            gen.appendInstruction("br i1 \(temp), label %L\(trueLabel), label %L\(falseLabel)");
+            gen.append("br i1 \(temp), label %L\(trueLabel), label %L\(falseLabel)");
         }
     }
 }
@@ -495,15 +495,15 @@ class Call: Expression {
         super.init(op: id.op, type: id.type, line: line)
     }
 
-    override func reduceWithGenerator(gen: Generator) -> Expression {
+    override func reduce(with gen: Generator) -> Expression {
         var reducedArray: [Expression] = []
         let index = 0
         for arg in args {
-            reducedArray.append(arg.convertTo(signature.args[index].type, withGenerator: gen))
+            reducedArray.append(arg.convert(to: signature.args[index].type, with: gen))
         }
         self.args = reducedArray
-        let temp = gen.getTemporaryOfType(type)
-        gen.appendInstruction("\(temp) = \(self)")
+        let temp = gen.getTemporary(of: type)
+        gen.append("\(temp) = \(self)")
         return temp
     }
 
@@ -515,7 +515,7 @@ class Call: Expression {
             if index < args.count-1 {
                 callString += ","
             }
-            index++
+            index += 1
         }
         callString += ")"
         return callString

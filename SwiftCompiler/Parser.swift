@@ -12,22 +12,20 @@ class Parser {
     var lexer: Lexer
 
     var lookahead: Token
-    var globalScope: Scope
     var topScope: Scope
     weak var currentFunc: Prototype! = nil
 
     init(lexer: Lexer) {
         self.lexer = lexer
         self.lookahead = lexer.nextToken()
-        self.globalScope = Scope()
-        self.topScope = self.globalScope
+        self.topScope = Scope.globalScope
     }
 
     func program() -> Program {
         var funcs: [Function] = []
-        while (lookahead == .LBrack) {
-            self.match(.LBrack)
-            if (lookahead == .Struct) {
+        while (lookahead == .lBrack) {
+            self.match(.lBrack)
+            if (lookahead == .struct) {
                 self.structure()
             }
             else {
@@ -36,25 +34,25 @@ class Parser {
                 }
             }
         }
-        let ret = Program(funcs: funcs, globalScope: globalScope)
+        let ret = Program(funcs: funcs, globalScope: Scope.globalScope)
         return ret
     }
 
     func structure() {
-        self.match(.Struct)
+        self.match(.struct)
         let name = lookahead
-        self.match(.Identifier(nil))
+        self.match(Token.anyIdentifier)
         let members = self.argList()
-        self.match(.RBrack)
+        self.match(.rBrack)
         let type = AggregateType(members: members, name: name, line: lexer.line)
-        globalScope.setType(type, forToken: name)
+        Scope.globalScope.set(type: type, forToken: name)
     }
 
     func function() -> Function? {
         let savedScope = topScope
-        topScope = Scope(previousScope: savedScope, globalScope: globalScope)
+        topScope = Scope(previousScope: savedScope)
         var proto = self.prototype()
-        if let exists = globalScope.prototypeForToken(proto.id.op) {
+        if let exists = Scope.globalScope.prototype(for: proto.id.op) {
             if exists.implemented {
                 error("attempt to redefine function \(proto) declared on line \(proto.id.line)", line: lexer.line)
             }
@@ -63,14 +61,14 @@ class Parser {
             }
         }
         else {
-            globalScope.setPrototype(proto, forToken: proto.id.op)
+            Scope.globalScope.set(prototype: proto, forToken: proto.id.op)
         }
 
-        if lookahead == .LBrace {
-            self.match(.LBrace)
+        if lookahead == .lBrace {
+            self.match(.lBrace)
             currentFunc = proto
             if let stmt = self.sequence() {
-                self.match(.RBrace)
+                self.match(.rBrace)
                 topScope = savedScope
                 proto.implemented = true
                 return Function(signature: proto, body: stmt, line: lexer.line)
@@ -88,14 +86,14 @@ class Parser {
 
         //get the identifier
         let funcIdTok = lookahead
-        self.match(.Identifier(nil))
+        self.match(Token.anyIdentifier)
 
         var args: [Identifier] = []
         //if there are arguments, get them
-        if lookahead == .Colon {
+        if lookahead == .colon {
             args = self.argList()
         }
-        self.match(.RBrack)
+        self.match(.rBrack)
 
         //create the identifier for the function and return the prototype
         let funcId = Identifier(op: funcIdTok, type: funcType, line: lexer.line)
@@ -105,51 +103,50 @@ class Parser {
 
     func argList() -> [Identifier] {
         var args: [Identifier] = []
-        self.match(.Colon)
+        self.match(.colon)
         repeat {
             let varType = self.type()
             let varIdTok = lookahead
-            self.match(.Identifier(nil))
+            self.match(Token.anyIdentifier)
 
             let id = Identifier(op: varIdTok, type: varType, line: lexer.line)
             id.isArgument = true
             args.append(id)
-            topScope.setIdentifier(id, forToken: varIdTok)
+            topScope.set(identifier: id, forToken: varIdTok)
 
             //if we are done, exit the loop
-            if lookahead == .RBrack {
+            if lookahead == .rBrack {
                 break
             }
             //otherwise, match a comma and possibly exit
-            self.match(.Comma)
-        } while (lookahead == .Type(nil))
+            self.match(.comma)
+        } while (Token.anyTypeName(lookahead))
         return args
     }
 
     func type() -> TypeBase {
         //match a type token and return the corresponding type
         switch lookahead {
-        case .Type(let type):
-            var ret = type!
-            self.match(.Type(nil))
-            while lookahead == .LBrack {
-                self.match(.LBrack)
+        case .typeName(var type):
+            self.match(Token.anyTypeName)
+            while lookahead == .lBrack {
+                self.match(.lBrack)
                 switch lookahead {
-                case .Integer(let val):
-                    self.match(.Integer(nil))
-                    ret = ArrayType(numElements: UInt(val!), to: ret)
-                    self.match(.RBrack)
-                case .RBrack:
-                    self.match(.RBrack)
-                    ret = ArrayType(numElements: 0, to: ret)
+                case .integer(let val):
+                    self.match(Token.anyIdentifier)
+                    type = ArrayType(numElements: UInt(val), to: type)
+                    self.match(.rBrack)
+                case .rBrack:
+                    self.match(.rBrack)
+                    type = ArrayType(numElements: 0, to: type)
                 default:
                     error("expected array type declaration", line: lexer.line)
                 }
             }
-            return ret
-        case .Identifier(_):
-            if let type = globalScope.typeForToken(lookahead) {
-                self.match(.Identifier(nil))
+            return type
+        case .identifier(_):
+            if let type = Scope.globalScope.type(for: lookahead) {
+                self.match(Token.anyIdentifier)
                 return type
             }
             fallthrough
@@ -158,113 +155,114 @@ class Parser {
         }
     }
 
-    func match(token: Token) {
+    func match(_ token: Token) {
         //match a specific token
-        if token == lookahead || token == .Any {
-            lookahead = lexer.nextToken()
-        }
-        else {
-            error("expected '\(token)' but found '\(lookahead)'", line: lexer.line)
-        }
+        match {$0 == token}
     }
 
-    func matchOneOf(tokens: Token ...) {
+    func matchOneOf(_ tokens: Token ...) {
         //match any one of multiple tokens
-        if (tokens.contains(lookahead) || tokens.contains(.Any)) {
+        match {tokens.contains($0)}
+    }
+
+    func match(_ condition: (Token) -> Bool) {
+        if (condition(lookahead)) {
             lookahead = lexer.nextToken()
         }
         else {
-            error("expected \(tokens) but found \(lookahead)", line: lexer.line)
+            error("found \(lookahead)", line: lexer.line)
         }
     }
-
 }
 
 //MARK: - Statements
 extension Parser {
     func statement() -> Statement {
         switch lookahead {
-        case .If:
+        case .if:
             return self.ifStatement()
-        case .While:
+        case .while:
             return self.whileStatement()
-        case .Do:
+        case .do:
             return self.doWhileStatement()
-        case .Return:
+        case .return:
             return self.returnStatement()
-        case .Type(_), .Identifier(_) where globalScope.typeForToken(lookahead) != nil:
+        case .typeName,
+             .identifier(_) where Scope.globalScope.type(for: lookahead) != nil:
             return self.declaration()
-        case .LBrack:
+        case .lBrack:
             //the beginning of a call
             let expr = self.callExpression()
             return Expratement(expr: expr, line: lexer.line)
-        case .LBrace:
+        case .lBrace:
             return self.block()
-        default:
+        case .identifier:
             return self.assignment()
+        default:
+            error("expected statement", line: lexer.line)
         }
     }
 
     func declaration() -> Statement {
         //a type indicates either a array or variable declaration
         let type = self.type()
-        if type is ArrayType {
-            return self.arrayDeclaration(type as! ArrayType)
+        if let type = type as? ArrayType {
+            return self.arrayDeclaration(of: type)
         }
         else {
-            return self.variableDeclaration(type)
+            return self.variableDeclaration(of: type)
         }
     }
 
-    func variableDeclaration(type: TypeBase) -> Statement {
+    func variableDeclaration(of type: TypeBase) -> Statement {
         let idTok = lookahead
-        self.match(.Identifier(nil))
+        self.match(Token.anyIdentifier)
         let id = Identifier(op: idTok, type: type, line: lexer.line)
         id.enclosingFuncName = currentFunc.id.op.LLVMString()
-        id.scopeNumber = globalScope.scopeCount
-        topScope.setIdentifier(id, forToken: idTok)
+        id.scopeNumber = Scope.globalScope.scopeCount
+        topScope.set(identifier: id, forToken: idTok)
 
         switch lookahead {
-        case .Semi:
-            self.match(.Semi)
+        case .semi:
+            self.match(.semi)
             return self.statement()
-        case .Assign:
-            self.match(.Assign)
+        case .assign:
+            self.match(.assign)
             let expr = self.orExpression()
-            self.match(.Semi)
+            self.match(.semi)
             return Assignment(id: id, expr: expr, line: lexer.line)
         default:
             error("expected variable declaration", line: lexer.line)
         }
     }
 
-    func arrayDeclaration(type: ArrayType) -> Statement {
+    func arrayDeclaration(of type: ArrayType) -> Statement {
         let idTok = lookahead
-        self.match(.Identifier(nil))
+        self.match(Token.anyIdentifier)
         let id = Identifier(op: idTok, type: type, line: lexer.line)
         id.enclosingFuncName = currentFunc.id.op.LLVMString()
-        id.scopeNumber = globalScope.scopeCount
-        topScope.setIdentifier(id, forToken: idTok)
-        if lookahead == .Assign {
-            self.match(.Assign)
+        id.scopeNumber = Scope.globalScope.scopeCount
+        topScope.set(identifier: id, forToken: idTok)
+        if lookahead == .assign {
+            self.match(.assign)
             let expr = self.arrayLiteral()
             //let numElements = (expr.type as? ArrayType)?.numElements ?? error("array literal must have array type", line: lexer.line);
-            if !validateArrayType(type, againstQualified: expr.type as! ArrayType) {
+            if !validate(type, againstQualified: expr.type as! ArrayType) {
                 error("array literal and declaration must agree in number of elements", line: lexer.line)
             }
             else {
-                self.match(.Semi)
+                self.match(.semi)
                 return Assignment(id: id, expr: expr, line: lexer.line)
             }
         }
         //TODO: check that array type is fully qualified (if there is no literal)
         else {
-            self.match(.Semi)
+            self.match(.semi)
             return Assignment(id: id, expr: type.defaultConstant(), line: lexer.line)
         }
     }
 
-    func validateArrayType(declared: ArrayType, againstQualified actual: ArrayType) -> Bool {
+    func validate(_ declared: ArrayType, againstQualified actual: ArrayType) -> Bool {
         if declared.numElements == 0 {
             declared.numElements = actual.numElements
         }
@@ -272,10 +270,10 @@ extension Parser {
             return false
         }
         else {
-            if let declared = declared.to as? ArrayType, actual = actual.to as? ArrayType {
-                return validateArrayType(declared, againstQualified: actual)
+            if let declared = declared.to as? ArrayType, let actual = actual.to as? ArrayType {
+                return validate(declared, againstQualified: actual)
             }
-            if actual.to.canConvertTo(declared.to) { //TODO: fix bug for converting sizes e.g. int to char
+            if actual.to.canConvert(to: declared.to) { //TODO: fix bug for converting sizes e.g. int to char
                 return true
             }
             return false
@@ -284,12 +282,12 @@ extension Parser {
 
     func block() -> Statement {
         //a block is just a sequence with its own scope
-        self.match(.LBrace)
+        self.match(.lBrace)
 
         //save the current scope and create a new one
-        topScope = Scope(previousScope: topScope, globalScope: globalScope)
+        topScope = Scope(previousScope: topScope)
         if let stmt = self.sequence() {
-            self.match(.RBrace)
+            self.match(.rBrace)
 
             //restore the scope
             topScope = topScope.previousScope!
@@ -299,7 +297,7 @@ extension Parser {
     }
 
     func sequence() -> Statement? {
-        if lookahead == .RBrace {
+        if lookahead == .rBrace {
             return nil
         }
         else {
@@ -308,21 +306,21 @@ extension Parser {
     }
 
     func ifStatement() -> If {
-        self.match(.If)
+        self.match(.if)
         let expr = self.expression()
         if !(expr is Logical) {
             error("expected expression with boolean result", line: lexer.line)
         }
         let stmt = self.statement()
-        if self.lookahead == .Else {
-            self.match(.Else)
+        if self.lookahead == .else {
+            self.match(.else)
             return If(expr: expr as! Logical, stmt: stmt, elseStmt: self.statement(), line: lexer.line)
         }
         return If(expr: expr as! Logical, stmt: stmt, line: lexer.line)
     }
 
     func whileStatement() -> While {
-        self.match(.While)
+        self.match(.while)
         let expr = self.expression()
         if !(expr is Logical) {
             error("expected expression with boolean result", line: lexer.line)
@@ -331,36 +329,36 @@ extension Parser {
     }
 
     func doWhileStatement() -> DoWhile {
-        self.match(.Do)
+        self.match(.do)
         let stmt = self.statement()
-        self.match(.While)
+        self.match(.while)
         let expr = self.expression()
         if !(expr is Logical) {
             error("expected expression with boolean result", line: lexer.line)
         }
-        self.match(.Semi)
+        self.match(.semi)
         return DoWhile(stmt: stmt, expr: expr as! Logical, line: lexer.line)
     }
 
     func returnStatement() -> Return {
-        self.match(.Return)
-        if lookahead == .Semi {
-            self.match(.Semi)
+        self.match(.return)
+        if lookahead == .semi {
+            self.match(.semi)
             return Return(from: currentFunc, line: lexer.line)
         }
         if currentFunc.id.type == TypeBase.voidType() {
             error("returning value from void function", line: lexer.line)
         }
         let expr = self.orExpression()
-        self.match(.Semi)
+        self.match(.semi)
         return Return(expr: expr, from: currentFunc, line: lexer.line)
     }
 
     func assignment() -> Assignment {
         let id = self.identifier()
-        self.match(.Assign)
+        self.match(.assign)
         let stmt = Assignment(id: id, expr: self.orExpression(), line: lexer.line)
-        self.match(.Semi)
+        self.match(.semi)
         return stmt
     }
 }
@@ -370,16 +368,16 @@ extension Parser {
 extension Parser {
     func expression() -> Expression {
         switch lookahead {
-        case .LParen:
-            self.match(.LParen)
+        case .lParen:
+            self.match(.lParen)
             let expr = self.orExpression()
-            self.match(.RParen)
+            self.match(.rParen)
             return expr
-        case .Integer(_),.Decimal(_),.Boolean(_):
+        case .integer(_),.decimal(_),.boolean(_):
             return self.constantExpression()
-        case .LBrack:
+        case .lBrack:
             return self.callExpression()
-        case .Identifier(_):
+        case .identifier(_):
             return self.identifier()
         default:
             error("expected expression", line: lexer.line)
@@ -388,8 +386,8 @@ extension Parser {
 
     func orExpression() -> Expression {
         var lhs = self.andExpression()
-        while lookahead == .Or {
-            self.match(.Or)
+        while lookahead == .or {
+            self.match(.or)
             let rhs = self.andExpression()
             if !(lhs is Logical && rhs is Logical) {
                 error("expected expression with boolean result", line: lexer.line)
@@ -401,8 +399,8 @@ extension Parser {
 
     func andExpression() -> Expression {
         var lhs = self.equalityExpression()
-        while lookahead == .And {
-            self.match(.And)
+        while lookahead == .and {
+            self.match(.and)
             let rhs = self.equalityExpression()
             if !(lhs is Logical && rhs is Logical) {
                 error("expected expression with boolean result", line: lexer.line)
@@ -414,9 +412,9 @@ extension Parser {
 
     func equalityExpression() -> Expression {
         var lhs = self.inequalityExpression()
-        while lookahead == .Equal || lookahead == .NEqual {
+        while lookahead == .equal || lookahead == .nEqual {
             let op = lookahead
-            self.matchOneOf(.Equal, .NEqual)
+            self.matchOneOf(.equal, .nEqual)
             let rhs = self.inequalityExpression()
             lhs = Relation(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -425,9 +423,9 @@ extension Parser {
 
     func inequalityExpression() -> Expression {
         var lhs = self.additionExpression()
-        while lookahead == .Less || lookahead == .LEqual || lookahead == .Greater || lookahead == .GEqual {
+        while lookahead == .less || lookahead == .lEqual || lookahead == .greater || lookahead == .gEqual {
             let op = lookahead
-            self.matchOneOf(.Less, .LEqual, .Greater, .GEqual)
+            self.matchOneOf(.less, .lEqual, .greater, .gEqual)
             let rhs = self.additionExpression()
             lhs = Relation(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -436,9 +434,9 @@ extension Parser {
 
     func additionExpression() -> Expression {
         var lhs = self.multiplicationExpression()
-        while lookahead == .Plus || lookahead == .Minus {
+        while lookahead == .plus || lookahead == .minus {
             let op = lookahead
-            self.matchOneOf(.Plus, .Minus)
+            self.matchOneOf(.plus, .minus)
             let rhs = self.multiplicationExpression()
             lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -447,9 +445,9 @@ extension Parser {
 
     func multiplicationExpression() -> Expression {
         var lhs = self.unaryExpression()
-        while lookahead == .Times || lookahead == .Divide {
+        while lookahead == .times || lookahead == .divide {
             let op = lookahead
-            self.matchOneOf(.Times, .Divide)
+            self.matchOneOf(.times, .divide)
             let rhs = self.unaryExpression()
             lhs = Arithmetic(op: op, expr1: lhs, expr2: rhs, line: lexer.line)
         }
@@ -457,28 +455,28 @@ extension Parser {
     }
 
     func unaryExpression() -> Expression {
-        if lookahead == .Minus {
-            self.match(.Minus)
+        if lookahead == .minus {
+            self.match(.minus)
             switch lookahead {
-            case .Integer(let val):
-                return Constant(intVal: -val!, line: lexer.line)
-            case .Decimal(let val):
-                return Constant(floatVal: -val!, line: lexer.line)
+            case .integer(let val):
+                return Constant(intVal: -val, line: lexer.line)
+            case .decimal(let val):
+                return Constant(floatVal: -val, line: lexer.line)
             default:
                 let expr = self.unaryExpression()
-                if expr is Unary && expr.op == .Minus {
+                if expr is Unary && expr.op == .minus {
                     return (expr as! Unary).expr
                 }
-                return Unary(op: .Minus, expr: expr, line: lexer.line)
+                return Unary(op: .minus, expr: expr, line: lexer.line)
             }
         }
-        else if lookahead == .Not {
-            self.match(.Not)
+        else if lookahead == .not {
+            self.match(.not)
             let expr = self.unaryExpression()
             if !(expr is Logical) {
                 error("expected expression with boolean result", line: lexer.line)
             }
-            return Not(op: .Not, expr: expr as! Logical, line: lexer.line)
+            return Not(op: .not, expr: expr as! Logical, line: lexer.line)
         }
         else {
             return self.expression()
@@ -486,23 +484,23 @@ extension Parser {
     }
 
     func callExpression() -> Expression {
-        self.match(.LBrack)
+        self.match(.lBrack)
         let idTok = lookahead
         let id = self.identifier()
         var args: [Expression] = []
-        if let signature = globalScope.prototypeForToken(idTok) {
+        if let signature = Scope.globalScope.prototype(for: idTok) {
             if signature.args.count > 0 {
-                self.match(.Colon)
+                self.match(.colon)
                 while (true) {
                     let expr = self.orExpression()
                     args.append(expr)
-                    if lookahead == .RBrack {
+                    if lookahead == .rBrack {
                         break
                     }
-                    self.match(.Comma)
+                    self.match(.comma)
                 }
             }
-            self.match(.RBrack)
+            self.match(.rBrack)
             return Call(id: id, args: args, signature: signature, line: lexer.line)
         }
         else {
@@ -512,9 +510,9 @@ extension Parser {
 
     func identifier() -> Identifier {
         let idTok = lookahead
-        if var id = topScope.identifierForToken(idTok) {
-            self.match(.Identifier(nil))
-            if lookahead == .LBrack {
+        if var id = topScope.identifier(for: idTok) {
+            self.match(Token.anyIdentifier)
+            if lookahead == .lBrack {
                 let exprs: [Expression] = self.accesses(id)
                 for expr in exprs {
                     if id.type is ArrayType {
@@ -532,27 +530,27 @@ extension Parser {
         }
     }
 
-    func accesses(id: Identifier) -> [Expression] {
+    func accesses(_ id: Identifier) -> [Expression] {
         var type = id.type
         var exprs: [Expression] = []
-        while lookahead == .LBrack {
+        while lookahead == .lBrack {
             var indexExprs: [Expression] = []
-            while let arr = type as? ArrayType where lookahead == .LBrack {
-                self.match(.LBrack)
+            while let arr = type as? ArrayType , lookahead == .lBrack {
+                self.match(.lBrack)
                 let expr = self.orExpression()
                 indexExprs.append(expr)
                 type = arr.to
-                self.match(.RBrack)
+                self.match(.rBrack)
             }
-            exprs.appendContentsOf(indexExprs.reverse())
-            while let agg = type as? AggregateType where lookahead == .LBrack {
-                self.match(.LBrack)
+            exprs.append(contentsOf: indexExprs.reversed())
+            while let agg = type as? AggregateType , lookahead == .lBrack {
+                self.match(.lBrack)
                 let idTok = lookahead
-                self.match(.Identifier(nil))
-                if let member = agg.getMemberWithName(idTok) {
+                self.match(Token.anyIdentifier)
+                if let member = agg.getMember(withName: idTok) {
                     exprs.append(member)
                     type = member.type
-                    self.match(.RBrack)
+                    self.match(.rBrack)
                 }
                 else {
                     error("no member \(idTok) found in type \(type)", line: lexer.line)
@@ -564,16 +562,16 @@ extension Parser {
 
     func constantExpression() -> Constant {
         switch lookahead {
-        case .Integer(let val):
-            self.match(.Integer(nil))
-            return Constant(intVal: val!, line: lexer.line)
-        case .Decimal(let val):
-            self.match(.Decimal(nil))
-            return Constant(floatVal: val!, line: lexer.line)
-        case .Boolean(let val):
-            self.match(.Boolean(nil))
-            return BooleanConstant(boolVal: val!, line: lexer.line)
-        case .LBrack:
+        case .integer(let val):
+            self.match(Token.anyInteger)
+            return Constant(intVal: val, line: lexer.line)
+        case .decimal(let val):
+            self.match(Token.anyDecimal)
+            return Constant(floatVal: val, line: lexer.line)
+        case .boolean(let val):
+            self.match(Token.anyBoolean)
+            return BooleanConstant(boolVal: val, line: lexer.line)
+        case .lBrack:
             return self.arrayLiteral()
         default:
             error("expected constant", line: lexer.line)
@@ -582,26 +580,26 @@ extension Parser {
 
     func arrayLiteral() -> ArrayLiteral {
         switch lookahead {
-        case .LBrack:
-            self.match(.LBrack)
+        case .lBrack:
+            self.match(.lBrack)
             var values: [Constant] = []
             while true {
                 let const = self.constantExpression()
                 values.append(const)
-                if lookahead != .Comma {
+                if lookahead != .comma {
                     break
                 }
-                self.match(.Comma)
+                self.match(.comma)
             }
-            self.match(.RBrack)
+            self.match(.rBrack)
             return ArrayLiteral(values: values, line: lexer.line)
-        case .StringLiteral(let str):
-            let charArray = str?.nulTerminatedUTF8 ?? []
+        case .stringLiteral(let str):
+            let charArray = str.utf8CString
             var values: [Constant] = []
             for c in charArray {
                 values.append(Constant(intVal: Int(c), line: lexer.line))
             }
-            self.match(.StringLiteral(nil))
+            self.match(Token.anyStringLiteral)
             return ArrayLiteral(values: values, line: lexer.line)
         default:
             error("expected array or string literal", line: lexer.line)
@@ -609,6 +607,6 @@ extension Parser {
     }
 }
 
-@noreturn func error(err: String, line: UInt) {
-    fatalError("near line \(line): \(err)")
+func error(_ err: String, line: UInt) -> Never  {
+    fatalError("near line \(line): \(err)");
 }

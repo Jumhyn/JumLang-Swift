@@ -34,27 +34,27 @@ class Lexer {
         buffer = string
         characterIndex = buffer.startIndex
         wordDict = [
-            "true" : .Boolean(true),
-            "false" : .Boolean(false),
-            "if" : .If,
-            "else" : .Else,
-            "while" : .While,
-            "do" : .Do,
-            "break" : .Break,
-            "return" : .Return,
-            "struct" : .Struct,
-            "char" : .Type(.charType()),
-            "int" : .Type(.intType()),
-            "float" : .Type(.floatType()),
-            "bool" : .Type(.boolType()),
-            "void" : .Type(.voidType())
+            "true" : .boolean(true),
+            "false" : .boolean(false),
+            "if" : .if,
+            "else" : .else,
+            "while" : .while,
+            "do" : .do,
+            "break" : .break,
+            "return" : .return,
+            "struct" : .struct,
+            "char" : .typeName(.charType()),
+            "int" : .typeName(.intType()),
+            "float" : .typeName(.floatType()),
+            "bool" : .typeName(.boolType()),
+            "void" : .typeName(.voidType())
         ]
     }
 
     //load the file if it contains anything, otherwise initialize with an empty string
     convenience init(file: String) {
         do {
-            let content = try String(contentsOfFile:file, encoding: NSUTF8StringEncoding)
+            let content = try String(contentsOfFile:file, encoding: String.Encoding.utf8)
             self.init(content)
         } catch _ {
             self.init("")
@@ -94,7 +94,7 @@ class Lexer {
     }
 
     func hasToken() -> Bool {
-        if currentChar {
+        if currentChar != "\0" {
             return true
         }
         else {
@@ -102,18 +102,18 @@ class Lexer {
         }
     }
 
-    private func skipIgnoredChars() {
+    fileprivate func skipIgnoredChars() {
         while currentChar == "/" || currentChar.isSpace() { //as long as there are comments or whitespace, skip them
             if currentChar == "/" {
                 switch nextChar() {
                 case "/": //the next two characters are "//", so skip the rest of the line
-                    while currentChar != "\n" && currentChar {
+                    while currentChar != "\n" && currentChar != "\0" {
                         advance()
                     }
-                    line++
+                    line += 1
                     advance()
                 case "*": //the next two characters are "/*" so skip until we find "*/"
-                    while nextChar() {
+                    while nextChar() != "\0" {
                         if currentChar == "*" {
                             if nextChar() == "/" {
                                 break
@@ -127,14 +127,14 @@ class Lexer {
             }
             while currentChar.isSpace() { //skip any whitespace, while keeping track of newlines
                 if currentChar == "\n" {
-                    line++
+                    line += 1
                 }
                 advance()
             }
         }
     }
 
-    private func getNumToken() -> Token {
+    fileprivate func getNumToken() -> Token {
         var val = 0
         while currentChar.isDigit() { //loop through digit by digit until we hit something that isnt a digit
             val = val * 10 + currentChar.toInt()!
@@ -145,17 +145,18 @@ class Lexer {
             var doubleVal = Double(val)
             var powerOfTen: Double = 1.0
             while currentChar.isDigit() {
-                doubleVal += Double(currentChar.toInt()!) / pow(10.0, powerOfTen++)
+                doubleVal += Double(currentChar.toInt()!) / pow(10.0, powerOfTen)
+                powerOfTen += 1
                 advance()
             }
-            return .Decimal(doubleVal)
+            return .decimal(doubleVal)
         }
         else {
-            return .Integer(val)
+            return .integer(val)
         }
     }
 
-    private func getWordToken() -> Token {
+    fileprivate func getWordToken() -> Token {
         let startIndex = characterIndex
         while currentChar.isAlpha() || currentChar.isDigit() { //as long as we have an alphanumeric character, keep going
             advance()
@@ -165,12 +166,12 @@ class Lexer {
             return tok
         }
         else { //...otherwise, it's a new identifier, so add it to the dictionary!
-            wordDict[word] = .Identifier(word)
-            return .Identifier(word)
+            wordDict[word] = .identifier(word)
+            return .identifier(word)
         }
     }
 
-    private func getStringToken() -> Token {
+    fileprivate func getStringToken() -> Token {
         advance() //skip over opening quote that brought us here
         let startIndex = characterIndex
         while nextChar() != "\"" { //until we encounter a closing quote, skip over characters
@@ -180,28 +181,28 @@ class Lexer {
         }
         let str = buffer[startIndex..<characterIndex] //create the string like we did the word
         advance()
-        return .StringLiteral(str)
+        return .stringLiteral(str)
     }
 
-    private func advance() {
+    fileprivate func advance() {
         if !(characterIndex == buffer.endIndex) {
-            characterIndex = characterIndex.successor()
+            characterIndex = buffer.index(after: characterIndex)
         }
     }
 
-    private func recede() {
+    fileprivate func recede() {
         if !(characterIndex == buffer.startIndex) {
-            characterIndex = characterIndex.predecessor()
+            characterIndex = buffer.index(before: characterIndex)
         }
     }
 
-    private func advance(num: UInt) {
-        num.times {
+    fileprivate func advance(_ stride: UInt) {
+        stride.times {
             self.advance()
         }
     }
 
-    private func recede(num: UInt) {
+    fileprivate func recede(_ num: UInt) {
         num.times {
             self.recede()
         }

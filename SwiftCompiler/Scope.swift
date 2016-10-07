@@ -15,39 +15,31 @@ class Scope {
     var scopeCount: UInt = 0
     var previousScope: Scope? = nil
 
-    unowned var globalScope: Scope
+    static var globalScope: Scope = Scope()
 
-    convenience init(previousScope: Scope) {
-        self.init(previousScope: previousScope, globalScope: self)
+    init() {
     }
 
-    convenience init() {
-        self.init(globalScope: self)
-    }
-
-    init(globalScope: Scope) {
-        self.globalScope = globalScope
-    }
-
-    init(previousScope: Scope, globalScope: Scope) {
+    init(previousScope: Scope) {
         self.previousScope = previousScope
-        self.globalScope = globalScope
-        self.globalScope.scopeCount++
+        Scope.globalScope.scopeCount += 1
     }
 
-    func identifierForToken(token: Token) -> Identifier? {
-        for (var currentScope: Scope? = self; currentScope != nil; currentScope = currentScope?.previousScope) {
-            if let ret = symTable[token] {
+    func identifier(for token: Token) -> Identifier? {
+        var currentScope: Scope? = self
+        while let currentScopeUnwrapped = currentScope {
+            if let ret = currentScopeUnwrapped.symTable[token] {
                 return ret
             }
+            currentScope = currentScopeUnwrapped.previousScope
         }
-        if let ret = globalScope.symTable[token] {
+        if let ret = Scope.globalScope.symTable[token] {
             return ret
         }
-        return self.prototypeForToken(token)?.id
+        return self.prototype(for: token)?.id
     }
 
-    func setIdentifier(id: Identifier, forToken token: Token) {
+    func set(identifier id: Identifier, forToken token: Token) {
         if let exists = symTable[token] {
             error("attempted to redefine identifier '\(exists.op.LLVMString())' declared on line \(exists.line)", line: id.line)
         }
@@ -56,29 +48,29 @@ class Scope {
         }
     }
 
-    func prototypeForToken(token: Token) -> Prototype? {
-        return globalScope.funcTable[token]
+    func prototype(for token: Token) -> Prototype? {
+        return Scope.globalScope.funcTable[token]
     }
 
-    func setPrototype(proto: Prototype, forToken token: Token) {
-        if let exists = globalScope.funcTable[token] {
+    func set(prototype proto: Prototype, forToken token: Token) {
+        if let exists = Scope.globalScope.funcTable[token] {
             error("attempted to redefine function '\(exists.id.op.LLVMString())' declared on line \(exists.line)", line: proto.line)
         }
         else {
-            globalScope.funcTable[token] = proto
+            Scope.globalScope.funcTable[token] = proto
         }
     }
 
-    func typeForToken(token: Token) -> TypeBase? {
-        return globalScope.typeTable[token]
+    func type(for token: Token) -> TypeBase? {
+        return Scope.globalScope.typeTable[token]
     }
 
-    func setType(type: NamedType, forToken token: Token) {
-        if let exists = globalScope.typeTable[token]  {
+    func set(type: NamedType, forToken token: Token) {
+        if let exists = Scope.globalScope.typeTable[token]  {
             error("attempted to redefine type '\(exists.LLVMString())' declared on line \(exists.line)", line: type.line)
         }
         else {
-            globalScope.typeTable[token] = type
+            Scope.globalScope.typeTable[token] = type
         }
     }
 }

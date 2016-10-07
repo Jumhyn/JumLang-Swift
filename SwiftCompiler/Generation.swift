@@ -12,35 +12,37 @@ typealias Label = UInt
 
 class Generator {
     var currentLabel: Label = 1
-    var tempCount: UInt = 1
+    var tempCount: UInt = 0
     var output = ""
     var betweenBlocks = false
 
     func reserveLabel() -> Label {
-        return currentLabel++
+        currentLabel += 1
+        return currentLabel - 1
     }
 
-    func getTemporaryOfType(type: TypeBase) -> Temporary {
-        return Temporary(number: tempCount++, type: type, line: 0)
+    func getTemporary(of type: TypeBase) -> Temporary {
+        tempCount += 1
+        return Temporary(number: tempCount, type: type, line: 0)
     }
 
-    func appendLabel(label: Label) {
-        output.extendLn("L\(label):")
+    func append(_ label: Label) {
+        output.append(line: "L\(label):")
     }
 
-    func appendInstruction(code: String) {
-        output.extendLn(code)
+    func append(_ instruction: String) {
+        output.append(line: instruction)
     }
 
-    func generateLLVMForProgram(program: Program) {
+    func generateLLVM(for program: Program) {
         for type in program.globalScope.typeTable.values {
-            self.appendInstruction("\(type.LLVMString()) = \(type.LLVMLongString())")
+            self.append("\(type.LLVMString()) = \(type.LLVMLongString())")
         }
         for function in program.funcs {
             if !function.signature.implemented {
                 error("function \(function.signature) declared on line \(function.signature.id.line) is never defined", line: function.signature.id.line)
             }
-            function.generateLLVMWithGenerator(self)
+            function.generateLLVM(with: self)
         }
     }
 }
